@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model FipiRecord {
+  id           Int      @id @default(autoincrement())
+  date         String   // YYYY-MM-DD
+  investorType String   // e.g. "Foreign Corporates", "Banks / DFI", "Mutual Funds"
+  buyValue     Float    // in USD or PKR
+  sellValue    Float    // in USD or PKR
+  netValue     Float    // in USD or PKR
+
+  @@unique([date, investorType])
+}
