@@ -29,6 +29,12 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('Overview');
+  const [events, setEvents] = useState<{ boardMeetings: any[]; financialResults: any[]; loading: boolean; lastUpdated: string | null }>({
+    boardMeetings: [],
+    financialResults: [],
+    loading: false,
+    lastUpdated: null,
+  });
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -52,6 +58,29 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     const id = setInterval(fetchDetail, 60_000);
     return () => clearInterval(id);
   }, [symbol]);
+
+  // Fetch live events separately (board meetings + financial results) when Events tab is opened
+  useEffect(() => {
+    if (activeTab !== 'Events') return;
+    if (events.lastUpdated) return; // Already fetched
+    setEvents(prev => ({ ...prev, loading: true }));
+    fetch(`/api/stocks/${symbol}/events`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) {
+          setEvents({
+            boardMeetings: json.boardMeetings || [],
+            financialResults: json.financialResults || [],
+            loading: false,
+            lastUpdated: json.lastUpdated,
+          });
+        } else {
+          // Fallback to data from main stock fetch
+          setEvents(prev => ({ ...prev, loading: false, lastUpdated: 'fallback' }));
+        }
+      })
+      .catch(() => setEvents(prev => ({ ...prev, loading: false, lastUpdated: 'fallback' })));
+  }, [activeTab, symbol]);
 
   if (loading) {
     return (
@@ -306,38 +335,63 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         
         {activeTab === 'Events' && (
           <div>
-            <h3 style={{ marginBottom: 16 }}>Board Meetings & Results</h3>
-            
-            <h4 style={{ color: 'var(--text-secondary)', marginBottom: 12, marginTop: 20 }}>Board Meetings</h4>
-            {data.boardMeetings?.length > 0 ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>Board Meetings & Results</h3>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                background: events.lastUpdated && events.lastUpdated !== 'fallback' ? 'rgba(0,230,118,0.12)' : 'rgba(255,184,0,0.12)',
+                color: events.lastUpdated && events.lastUpdated !== 'fallback' ? '#00E676' : '#FFB800',
+                border: `1px solid ${events.lastUpdated && events.lastUpdated !== 'fallback' ? 'rgba(0,230,118,0.3)' : 'rgba(255,184,0,0.3)'}`,
+              }}>
+                {events.loading ? '⏳ Loading...' : events.lastUpdated && events.lastUpdated !== 'fallback' ? '🟢 LIVE' : '🟡 CACHED'}
+              </span>
+            </div>
+
+            <h4 style={{ color: 'var(--text-secondary)', marginBottom: 10, marginTop: 16 }}>Board Meetings</h4>
+            {events.loading ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>Fetching latest board meetings...</div>
+            ) : (events.boardMeetings.length > 0 ? events.boardMeetings : (data.boardMeetings || [])).length > 0 ? (
               <div style={{ background: 'var(--glass-bg)', borderRadius: 8, overflow: 'hidden' }}>
-                {data.boardMeetings.map((bm: any, i: number) => (
+                {(events.boardMeetings.length > 0 ? events.boardMeetings : (data.boardMeetings || [])).map((bm: any, i: number) => (
                   <div key={i} style={{ padding: 12, borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>{bm.meetingDate}</div>
-                    <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 4 }}>{bm.agenda}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--accent-cyan)', fontSize: 13 }}>{bm.meetingDate}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 4, lineHeight: 1.4 }}>{bm.agenda}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ color: 'var(--text-muted)' }}>No recent board meetings announced.</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No board meetings found for {symbol}.</div>
             )}
 
-            <h4 style={{ color: 'var(--text-secondary)', marginBottom: 12, marginTop: 32 }}>Financial Results</h4>
-            {data.financialResults?.length > 0 ? (
+            <h4 style={{ color: 'var(--text-secondary)', marginBottom: 10, marginTop: 28 }}>Financial Results</h4>
+            {events.loading ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>Fetching latest financial results...</div>
+            ) : (events.financialResults.length > 0 ? events.financialResults : (data.financialResults || [])).length > 0 ? (
               <div style={{ background: 'var(--glass-bg)', borderRadius: 8, overflow: 'hidden' }}>
-                {data.financialResults.map((fr: any, i: number) => (
+                {(events.financialResults.length > 0 ? events.financialResults : (data.financialResults || [])).map((fr: any, i: number) => (
                   <div key={i} style={{ padding: 12, borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>{fr.resultDate}</span>
-                      <span style={{ fontSize: 12, background: 'var(--glass-hover)', padding: '2px 8px', borderRadius: 12 }}>{fr.resultType}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--accent-cyan)', fontSize: 13 }}>{fr.resultDate}</span>
+                      <span style={{ fontSize: 11, background: 'var(--glass-hover)', padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap' }}>
+                        {fr.resultType}
+                      </span>
                     </div>
-                    <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 4 }}>{fr.period}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 4, lineHeight: 1.4 }}>{fr.period}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ color: 'var(--text-muted)' }}>No recent financial results announced.</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No financial results found for {symbol}.</div>
             )}
+
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <a href="/board-meetings" style={{ color: 'var(--accent-cyan)', fontSize: 12, fontWeight: 600, marginRight: 20 }}>
+                All Board Meetings →
+              </a>
+              <a href="/financial-results" style={{ color: 'var(--accent-cyan)', fontSize: 12, fontWeight: 600 }}>
+                All Financial Results →
+              </a>
+            </div>
           </div>
         )}
 
