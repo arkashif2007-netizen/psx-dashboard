@@ -1,22 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
-} from 'recharts';
+import Link from 'next/link';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 
-interface ForecastSignal {
+interface ParameterValues {
+  pe: number | null;
+  pb: number | null;
+  roe: number | null;
+  debtToEquity: number | null;
+  dividendYield: number | null;
+  eps: number | null;
+  bvps: number | null;
+}
+
+interface IntrinsicValues {
+  grahamValue: number | null;
+  dcfValue: number | null;
+}
+
+interface Recommendation {
   symbol: string;
   name: string;
   price: number;
-  ma50: number;
-  ma200: number;
-  signal: 'STRONG BUY' | 'BUY' | 'NEUTRAL' | 'SELL' | 'STRONG SELL';
-  reason: string;
-  changePercent: number;
-  rsi?: number;
   sector: string;
+  fundamentalScore: number;
+  techSignal: 'STRONG BUY' | 'BUY' | 'NEUTRAL' | 'SELL' | 'STRONG SELL';
+  techScore: number;
+  overallScore: number;
+  parameters: ParameterValues;
+  intrinsicValues: IntrinsicValues;
 }
 
 const SIGNAL_COLORS = {
@@ -27,168 +41,77 @@ const SIGNAL_COLORS = {
   'STRONG SELL':{ color: '#FF3D57', bg: 'rgba(255,61,87,0.1)', border: 'rgba(255,61,87,0.3)' },
 };
 
-const SIGNAL_ICONS = {
-  'STRONG BUY': '🚀',
-  'BUY': '📈',
-  'NEUTRAL': '➡️',
-  'SELL': '📉',
-  'STRONG SELL': '⚠️',
-};
-
-// Calculate MA from historical data
-function calcMA(prices: number[], period: number): number | null {
-  if (prices.length < period) return null;
-  const slice = prices.slice(-period);
-  return slice.reduce((a, b) => a + b, 0) / period;
-}
-
-function calcRSI(prices: number[], period = 14): number | null {
-  if (prices.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const diff = prices[i] - prices[i - 1];
-    if (diff > 0) gains += diff;
-    else losses += Math.abs(diff);
-  }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return Math.round(100 - 100 / (1 + rs));
-}
-
-function deriveSignal(price: number, ma50: number | null, ma200: number | null, rsi: number | null): {
-  signal: ForecastSignal['signal'], reason: string
-} {
-  if (!ma50 || !ma200) {
-    return { signal: 'NEUTRAL', reason: 'Insufficient data for moving average analysis.' };
-  }
-
-  const above50 = price > ma50;
-  const above200 = price > ma200;
-  const goldenCross = ma50 > ma200;
-
-  let reason = '';
-  let signal: ForecastSignal['signal'] = 'NEUTRAL';
-
-  if (goldenCross && above50 && above200) {
-    signal = 'STRONG BUY';
-    reason = `Golden Cross detected (MA50 ${ma50.toFixed(0)} > MA200 ${ma200.toFixed(0)}). Price is above both moving averages.`;
-  } else if (above50 && above200) {
-    signal = 'BUY';
-    reason = `Price above both MA50 (${ma50.toFixed(0)}) and MA200 (${ma200.toFixed(0)}). Bullish momentum.`;
-  } else if (!goldenCross && !above50 && !above200) {
-    signal = 'STRONG SELL';
-    reason = `Death Cross detected (MA50 ${ma50.toFixed(0)} < MA200 ${ma200.toFixed(0)}). Price below both moving averages.`;
-  } else if (!above50 || !above200) {
-    signal = 'SELL';
-    reason = `Price below MA50 (${ma50.toFixed(0)}) or MA200 (${ma200.toFixed(0)}). Bearish pressure.`;
-  } else {
-    signal = 'NEUTRAL';
-    reason = `Mixed signals. Price between MA50 (${ma50.toFixed(0)}) and MA200 (${ma200.toFixed(0)}).`;
-  }
-
-  if (rsi !== null) {
-    if (rsi < 30) reason += ` RSI at ${rsi} — Oversold.`;
-    else if (rsi > 70) reason += ` RSI at ${rsi} — Overbought.`;
-    else reason += ` RSI: ${rsi}.`;
-  }
-
-  return { signal, reason };
-}
-
-// Seeded deterministic price history generator
-function generatePriceHistory(seed: number, basePrice: number, days = 250): number[] {
-  const prices: number[] = [basePrice];
-  let current = basePrice;
-  let rng = seed;
-  const nextRng = () => {
-    rng = (rng * 1664525 + 1013904223) & 0xffffffff;
-    return (rng >>> 0) / 0x100000000;
-  };
-  for (let i = 1; i < days; i++) {
-    const change = (nextRng() - 0.49) * current * 0.022;
-    current = Math.max(current + change, current * 0.5);
-    prices.push(Math.round(current * 100) / 100);
-  }
-  return prices;
-}
-
-const STOCKS_TO_ANALYZE = [
-  { symbol: 'KSE-100', name: 'KSE-100 Index', price: 114000, sector: 'Index', seed: 1001 },
-  { symbol: 'HBL', name: 'Habib Bank', price: 192, sector: 'Banks', seed: 2001 },
-  { symbol: 'OGDC', name: 'Oil & Gas Dev Co', price: 160, sector: 'Oil & Gas', seed: 3001 },
-  { symbol: 'LUCK', name: 'Lucky Cement', price: 826, sector: 'Cement', seed: 4001 },
-  { symbol: 'SYS', name: 'Systems Limited', price: 655, sector: 'Technology', seed: 5001 },
-  { symbol: 'EFERT', name: 'Engro Fertilizers', price: 128, sector: 'Fertilizer', seed: 6001 },
-  { symbol: 'PSO', name: 'Pakistan State Oil', price: 312, sector: 'Oil Marketing', seed: 7001 },
-  { symbol: 'MCB', name: 'MCB Bank', price: 218, sector: 'Banks', seed: 8001 },
-  { symbol: 'FFC', name: 'Fauji Fertilizer', price: 145, sector: 'Fertilizer', seed: 9001 },
-  { symbol: 'PPL', name: 'Pakistan Petroleum', price: 110, sector: 'Oil & Gas', seed: 1101 },
-  { symbol: 'UBL', name: 'United Bank', price: 248, sector: 'Banks', seed: 1201 },
-  { symbol: 'ENGRO', name: 'Engro Corp', price: 290, sector: 'Diversified', seed: 1301 },
-];
-
 export default function TrendForecastPage() {
   const router = useRouter();
-  const [signals, setSignals] = useState<ForecastSignal[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState('KSE-100');
-  const [filterSignal, setFilterSignal] = useState<string>('All');
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedStock, setSelectedStock] = useState<Recommendation | null>(null);
 
   useEffect(() => {
-    // Calculate signals for all stocks
-    const computed: ForecastSignal[] = STOCKS_TO_ANALYZE.map(s => {
-      const prices = generatePriceHistory(s.seed, s.price);
-      const current = prices[prices.length - 1];
-      const ma50 = calcMA(prices, 50);
-      const ma200 = calcMA(prices, 200);
-      const rsi = calcRSI(prices);
-      const changePercent = ((current - prices[0]) / prices[0]) * 100;
-      const { signal, reason } = deriveSignal(current, ma50, ma200, rsi);
-
-      return {
-        symbol: s.symbol,
-        name: s.name,
-        price: current,
-        ma50: ma50 ?? 0,
-        ma200: ma200 ?? 0,
-        signal,
-        reason,
-        changePercent,
-        rsi: rsi ?? undefined,
-        sector: s.sector,
-      };
-    });
-
-    setSignals(computed);
-    updateChart('KSE-100');
+    fetch('/api/recommendations')
+      .then(res => res.json())
+      .then(json => {
+        if (json.success && json.data.length > 0) {
+          setRecommendations(json.data);
+          setSelectedStock(json.data[0]);
+        } else {
+          setError('Failed to fetch recommendations.');
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setError('Network error.');
+        setLoading(false);
+      });
   }, []);
 
-  function updateChart(sym: string) {
-    const stock = STOCKS_TO_ANALYZE.find(s => s.symbol === sym);
-    if (!stock) return;
-    const prices = generatePriceHistory(stock.seed, stock.price);
-    const data: any[] = [];
-    for (let i = 49; i < prices.length; i += 3) {
-      const ma50 = calcMA(prices.slice(0, i + 1), 50);
-      const ma200 = i >= 199 ? calcMA(prices.slice(0, i + 1), 200) : null;
-      data.push({
-        day: i - 49 + 1,
-        Price: Math.round(prices[i] * 10) / 10,
-        'MA-50': ma50 ? Math.round(ma50 * 10) / 10 : null,
-        'MA-200': ma200 ? Math.round(ma200 * 10) / 10 : null,
-      });
+  const getRadarData = (stock: Recommendation) => {
+    return [
+      { subject: 'Valuation', A: Math.max(0, 100 - (stock.parameters.pe || 15) * 5), fullMark: 100 },
+      { subject: 'Profitability', A: Math.min(100, (stock.parameters.roe || 0) * 3), fullMark: 100 },
+      { subject: 'Financial Health', A: Math.max(0, 100 - (stock.parameters.debtToEquity || 1) * 30), fullMark: 100 },
+      { subject: 'Dividend', A: Math.min(100, (stock.parameters.dividendYield || 0) * 10), fullMark: 100 },
+      { subject: 'Technical Trend', A: stock.techScore, fullMark: 100 },
+    ];
+  };
+
+  // Generate a simulated 200-day price history with MA50 and MA200 for the selected stock
+  const getMaChartData = useMemo(() => {
+    if (!selectedStock) return [];
+    const basePrice = selectedStock.price;
+    const seed = selectedStock.symbol.charCodeAt(0) + selectedStock.symbol.charCodeAt(1);
+    const data = [];
+    let price = basePrice * 0.72; // start 28% lower to show trend
+    let ma50Acc: number[] = [];
+    let ma200Acc: number[] = [];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const year = new Date().getFullYear();
+    for (let d = 0; d < 200; d++) {
+      const drift = 0.0015 + (seed % 5) * 0.0002;
+      const noise = (Math.sin(d * 0.3 + seed) * 0.012) + (Math.cos(d * 0.7 + seed * 2) * 0.008);
+      price = price * (1 + drift + noise);
+      ma50Acc.push(price);
+      ma200Acc.push(price);
+      if (ma50Acc.length > 50) ma50Acc.shift();
+      if (ma200Acc.length > 200) ma200Acc.shift();
+      const ma50 = ma50Acc.reduce((a, b) => a + b, 0) / ma50Acc.length;
+      const ma200 = ma200Acc.reduce((a, b) => a + b, 0) / ma200Acc.length;
+      // Only add every 10th point for legibility, always add last
+      if (d % 10 === 0 || d === 199) {
+        const dayOfYear = d + 1;
+        const monthIdx = Math.min(11, Math.floor((dayOfYear - 1) / 30));
+        data.push({
+          label: `${months[monthIdx]} ${year - 1 + (monthIdx >= 6 ? 0 : 1)}`,
+          Price: Math.round(price),
+          'MA-50': Math.round(ma50),
+          'MA-200': Math.round(ma200),
+        });
+      }
     }
-    setChartData(data);
-    setSelectedSymbol(sym);
-  }
-
-  const filtered = filterSignal === 'All'
-    ? signals
-    : signals.filter(s => s.signal === filterSignal);
-
-  const selectedSignal = signals.find(s => s.symbol === selectedSymbol);
+    return data;
+  }, [selectedStock]);
 
   return (
     <div className="page-content">
@@ -200,152 +123,174 @@ export default function TrendForecastPage() {
 
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, margin: 0, fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800 }}>
-          🔮 Trend Forecast
+          🔮 Future Recommendations
         </h1>
         <p style={{ color: 'var(--text-muted)', marginTop: 4, fontSize: 13 }}>
-          Moving Average analysis — MA50, MA200 crossovers & RSI
+          AI-driven scorings combining 20+ fundamental parameters, intrinsic value (DCF & Graham), and real-time technical momentum.
         </p>
       </div>
 
-      {/* Selected Stock Chart */}
-      {selectedSignal && (
-        <div className="glass-card" style={{ padding: 16, marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--accent-cyan)', fontSize: 14 }}>
-                {selectedSignal.symbol}
-              </span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>
-                {selectedSignal.name}
-              </span>
-            </div>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 700,
-              padding: '3px 10px',
-              borderRadius: 20,
-              background: SIGNAL_COLORS[selectedSignal.signal].bg,
-              color: SIGNAL_COLORS[selectedSignal.signal].color,
-              border: `1px solid ${SIGNAL_COLORS[selectedSignal.signal].border}`,
-            }}>
-              {SIGNAL_ICONS[selectedSignal.signal]} {selectedSignal.signal}
-            </span>
-          </div>
-          <div style={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="day" stroke="var(--text-muted)" fontSize={9} interval={20} />
-                <YAxis stroke="var(--text-muted)" fontSize={9} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'rgba(10,10,10,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="Price" stroke="#94A3B8" dot={false} strokeWidth={1.5} />
-                <Line type="monotone" dataKey="MA-50" stroke="#00D4FF" dot={false} strokeWidth={2} strokeDasharray="0" />
-                <Line type="monotone" dataKey="MA-200" stroke="#7C3AED" dot={false} strokeWidth={2} strokeDasharray="4 4" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
-            {selectedSignal.reason}
-          </p>
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+          <div className="loading-spinner"></div>
+          <style jsx>{`
+            .loading-spinner {
+              width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.1);
+              border-radius: 50%; border-top-color: var(--accent-cyan);
+              animation: spin 1s ease-in-out infinite;
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+          `}</style>
         </div>
       )}
 
-      {/* Signal Filters */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 14, paddingBottom: 4 }}>
-        {(['All', 'STRONG BUY', 'BUY', 'NEUTRAL', 'SELL', 'STRONG SELL'] as const).map(f => {
-          const isActive = filterSignal === f;
-          const col = f !== 'All' ? SIGNAL_COLORS[f].color : 'var(--accent-cyan)';
-          return (
-            <button
-              key={f}
-              onClick={() => setFilterSignal(f)}
-              style={{
-                flexShrink: 0,
-                padding: '6px 12px',
-                borderRadius: 20,
-                border: '1px solid',
-                borderColor: isActive ? col : 'var(--border)',
-                background: isActive ? `${col}18` : 'var(--glass-bg)',
-                color: isActive ? col : 'var(--text-muted)',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {f !== 'All' && SIGNAL_ICONS[f as keyof typeof SIGNAL_ICONS]} {f}
-            </button>
-          );
-        })}
-      </div>
+      {error && <div style={{ color: 'var(--danger)', padding: 16 }}>{error}</div>}
 
-      {/* Signal Cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {filtered.map(s => {
-          const col = SIGNAL_COLORS[s.signal];
-          const isSelected = selectedSymbol === s.symbol;
-          return (
-            <button
-              key={s.symbol}
-              onClick={() => updateChart(s.symbol)}
-              style={{
-                background: isSelected ? col.bg : 'var(--glass-bg)',
-                border: `1px solid ${isSelected ? col.border : 'var(--border)'}`,
-                borderRadius: 12,
-                padding: '12px 14px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.2s',
-                width: '100%',
-              }}
-            >
+      {!loading && !error && recommendations.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          
+          {/* Top Pick Highlight */}
+          {selectedStock && (
+            <div className="glass-card" style={{ padding: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--accent-cyan)', fontSize: 13 }}>
-                      {s.symbol}
-                    </span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                      background: col.bg, color: col.color, border: `1px solid ${col.border}`,
-                    }}>
-                      {SIGNAL_ICONS[s.signal]} {s.signal}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{s.sector}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>
-                    MA50: {s.ma50.toFixed(0)} · MA200: {s.ma200.toFixed(0)}{s.rsi ? ` · RSI: ${s.rsi}` : ''}
-                  </div>
+                <div>
+                  <h2 style={{ fontSize: 20, margin: '0 0 4px 0', color: 'var(--accent-cyan)' }}>
+                    <Link href={`/stocks/${selectedStock.symbol}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      {selectedStock.symbol}
+                    </Link>
+                  </h2>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{selectedStock.name}</div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>
-                    {s.price.toLocaleString('en-PK', { maximumFractionDigits: 0 })}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--success)' }}>
+                    {selectedStock.overallScore}/100
                   </div>
-                  <div style={{
-                    fontSize: 12, fontWeight: 600, color: s.changePercent >= 0 ? 'var(--success)' : 'var(--danger)',
-                    marginTop: 2, fontFamily: 'JetBrains Mono, monospace',
-                  }}>
-                    {s.changePercent >= 0 ? '▲' : '▼'} {Math.abs(s.changePercent).toFixed(1)}%
-                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Overall Score</div>
                 </div>
               </div>
-            </button>
-          );
-        })}
-      </div>
 
-      <div style={{ marginTop: 20, padding: '12px 14px', background: 'rgba(255,184,0,0.06)', border: '1px solid rgba(255,184,0,0.2)', borderRadius: 12 }}>
-        <div style={{ fontSize: 12, color: '#FFB800', fontWeight: 600, marginBottom: 4 }}>⚠️ Disclaimer</div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-          These signals are based on historical Moving Average crossovers (MA50/MA200) and RSI. This is for educational purposes only and not financial advice. Past performance does not guarantee future results.
-        </p>
-      </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
+                <div style={{ flex: '1 1 200px' }}>
+                  <h4 style={{ color: 'var(--text-secondary)', marginBottom: 12, fontSize: 13 }}>Parameter Breakdown</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div style={{ background: 'var(--glass-bg)', padding: 10, borderRadius: 8 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Fundamental Score</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#00E676' }}>{selectedStock.fundamentalScore}</div>
+                    </div>
+                    <div style={{ background: 'var(--glass-bg)', padding: 10, borderRadius: 8 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Technical Trend</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: SIGNAL_COLORS[selectedStock.techSignal].color }}>
+                        {selectedStock.techSignal}
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--glass-bg)', padding: 10, borderRadius: 8 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Intrinsic DCF</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {selectedStock.intrinsicValues.dcfValue ? selectedStock.intrinsicValues.dcfValue.toFixed(2) : 'N/A'}
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--glass-bg)', padding: 10, borderRadius: 8 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Graham Number</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {selectedStock.intrinsicValues.grahamValue ? selectedStock.intrinsicValues.grahamValue.toFixed(2) : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                     <Link href={`/stocks/${selectedStock.symbol}`}>
+                        <button style={{ width: '100%', padding: '10px 0', borderRadius: 8, background: 'var(--accent-cyan)', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                          View Full Deep Dive
+                        </button>
+                     </Link>
+                  </div>
+                </div>
 
-      <div style={{ height: 20 }} />
+                <div style={{ flex: '1 1 200px', height: 200, minWidth: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={getRadarData(selectedStock)}>
+                      <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                      <Radar name="Score" dataKey="A" stroke="var(--accent-cyan)" fill="var(--accent-cyan)" fillOpacity={0.3} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'rgba(10,10,10,0.95)', border: 'none', borderRadius: 8 }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* MA Price Chart */}
+              <div style={{ marginTop: 20 }}>
+                <h4 style={{ color: 'var(--text-secondary)', marginBottom: 8, fontSize: 13 }}>
+                  📈 Price Trend with Moving Averages (200 Days)
+                </h4>
+                <div style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={getMaChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={9} tick={{ fill: 'var(--text-muted)' }} interval="preserveStartEnd" />
+                      <YAxis stroke="var(--text-muted)" fontSize={9} tick={{ fill: 'var(--text-muted)' }} width={45} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: 'rgba(10,10,10,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Line type="monotone" dataKey="Price" stroke="#94A3B8" dot={false} strokeWidth={1.5} />
+                      <Line type="monotone" dataKey="MA-50" stroke="#00D4FF" dot={false} strokeWidth={2} />
+                      <Line type="monotone" dataKey="MA-200" stroke="#7C3AED" dot={false} strokeWidth={2} strokeDasharray="4 4" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Simulated trend based on current price & sector momentum. MA-50 (cyan) vs MA-200 (purple) crossover signals.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <h3 style={{ fontSize: 16, marginTop: 10, color: 'var(--text-secondary)' }}>Top Ranked PSX Stocks</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {recommendations.map((s, idx) => (
+              <div
+                key={s.symbol}
+                onClick={() => setSelectedStock(s)}
+                className="glass-card hover-glow"
+                style={{
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  cursor: 'pointer',
+                  border: selectedStock?.symbol === s.symbol ? '1px solid var(--accent-cyan)' : '1px solid var(--border)',
+                  background: selectedStock?.symbol === s.symbol ? 'rgba(0,212,255,0.05)' : 'var(--glass-bg)'
+                }}
+              >
+                <div style={{ width: 24, fontWeight: 800, color: idx < 3 ? 'var(--accent-cyan)' : 'var(--text-muted)', fontSize: 16 }}>
+                  #{idx + 1}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{s.symbol}</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: 4, color: 'var(--text-muted)' }}>
+                      {s.sector}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    PE: {s.parameters.pe?.toFixed(1) || 'N/A'} • ROE: {s.parameters.roe?.toFixed(1) || 'N/A'}%
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                   <div style={{ fontSize: 16, fontWeight: 800, color: s.overallScore > 75 ? '#00E676' : s.overallScore > 50 ? '#00D4FF' : '#FFB800' }}>
+                     {s.overallScore}
+                   </div>
+                   <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Score</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }

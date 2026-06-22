@@ -8,12 +8,15 @@ import TVTechnicalWidget from '@/components/stocks/StockDetail/TVTechnicalWidget
 import TVProfileWidget from '@/components/stocks/StockDetail/TVProfileWidget';
 import CustomNewsWidget from '@/components/market/CustomNewsWidget';
 import FipiLipiMiniChart from '@/components/market/FipiLipiMiniChart';
+import InteractiveDCFCard from '@/components/stocks/StockDetail/InteractiveDCFCard';
+import ScoreDisplayCard from '@/components/stocks/StockDetail/ScoreDisplayCard';
 
 const TABS = [
   'Overview',
   'Fundamentals',
   'Technicals',
   'Intrinsic Value',
+  'Target Prices',
   'Recommendations',
   'Chart Patterns',
   'FIPI/LIPI',
@@ -27,6 +30,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [targetData, setTargetData] = useState<any>(null);
+  const [targetLoading, setTargetLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('Overview');
   const [events, setEvents] = useState<{ boardMeetings: any[]; financialResults: any[]; loading: boolean; lastUpdated: string | null }>({
@@ -81,6 +86,22 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
       })
       .catch(() => setEvents(prev => ({ ...prev, loading: false, lastUpdated: 'fallback' })));
   }, [activeTab, symbol]);
+
+  useEffect(() => {
+    if (activeTab === 'Target Prices' && !targetData && !targetLoading) {
+      setTargetLoading(true);
+      fetch(`/api/stocks/${symbol}/target-price`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) setTargetData(json.data);
+          setTargetLoading(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setTargetLoading(false);
+        });
+    }
+  }, [activeTab, symbol, targetData, targetLoading]);
 
   if (loading) {
     return (
@@ -213,24 +234,106 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           <div>
             <h3 style={{ marginBottom: 16 }}>Fundamental Analysis</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
-              <StatBox label="EPS" value={data.eps} suffix=" PKR" />
+              {/* Valuation */}
               <StatBox label="P/E Ratio" value={data.advancedFundamentals?.pe ?? data.pe} suffix="x" />
               <StatBox label="P/B Ratio" value={data.advancedFundamentals?.pb ?? (data.bvps && data.price ? (data.price / data.bvps).toFixed(2) : null)} suffix="x" />
-              <StatBox label="Book Value" value={data.bvps} suffix=" PKR" />
+              <StatBox label="P/S Ratio" value={data.advancedFundamentals?.ps ? data.advancedFundamentals.ps.toFixed(2) : null} suffix="x" />
+              <StatBox label="EV/EBITDA" value={data.advancedFundamentals?.evToEbitda ? data.advancedFundamentals.evToEbitda.toFixed(2) : null} suffix="x" />
+              
+              {/* Profitability & Returns */}
+              <StatBox label="EPS (TTM)" value={data.advancedFundamentals?.eps ?? data.eps} suffix=" PKR" />
               <StatBox label="ROE" value={data.advancedFundamentals?.roe ? `${data.advancedFundamentals.roe.toFixed(2)}%` : null} />
+              <StatBox label="ROA" value={data.advancedFundamentals?.roa ? `${data.advancedFundamentals.roa.toFixed(2)}%` : null} />
+              <StatBox label="Gross Margin" value={data.advancedFundamentals?.grossMargin ? `${data.advancedFundamentals.grossMargin.toFixed(2)}%` : null} />
+              <StatBox label="Oper. Margin" value={data.advancedFundamentals?.operatingMargin ? `${data.advancedFundamentals.operatingMargin.toFixed(2)}%` : null} />
+              <StatBox label="Net Margin" value={data.advancedFundamentals?.netMargin ? `${data.advancedFundamentals.netMargin.toFixed(2)}%` : null} />
+              <StatBox label="FCF Margin" value={data.advancedFundamentals?.freeCashFlowMargin ? `${data.advancedFundamentals.freeCashFlowMargin.toFixed(2)}%` : null} />
+              
+              {/* Liquidity & Health */}
               <StatBox label="Debt/Equity" value={data.advancedFundamentals?.debtToEquity ? data.advancedFundamentals.debtToEquity.toFixed(2) : null} />
+              <StatBox label="Current Ratio" value={data.advancedFundamentals?.currentRatio ? data.advancedFundamentals.currentRatio.toFixed(2) : null} />
+              <StatBox label="Quick Ratio" value={data.advancedFundamentals?.quickRatio ? data.advancedFundamentals.quickRatio.toFixed(2) : null} />
+              <StatBox label="Book Value" value={data.advancedFundamentals?.bookValuePerShare ?? data.bvps} suffix=" PKR" />
+              
+              {/* Dividends */}
               <StatBox label="Div. Yield" value={data.advancedFundamentals?.dividendYield ? `${data.advancedFundamentals.dividendYield.toFixed(2)}%` : null} />
+              
+              {/* Scale */}
+              <StatBox label="Market Cap" value={(() => {
+                const val = data.advancedFundamentals?.marketCap;
+                if (!val) return null;
+                return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
+              })()} />
+              <StatBox label="Revenue" value={(() => {
+                const val = data.advancedFundamentals?.totalRevenue;
+                if (!val) return null;
+                return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
+              })()} />
+              <StatBox label="Net Income" value={(() => {
+                const val = data.advancedFundamentals?.netIncome;
+                if (!val) return null;
+                return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
+              })()} />
+              <StatBox label="EBITDA" value={(() => {
+                const val = data.advancedFundamentals?.ebitda;
+                if (!val) return null;
+                return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
+              })()} />
+
+              {/* Shares & Price action */}
+              <StatBox label="Shares Out" value={data.shares} />
+              <StatBox label="Free Float" value={data.freeFloat} />
               <StatBox label="52W High" value={data.week52High} />
               <StatBox label="52W Low" value={data.week52Low} />
-              <StatBox label="Free Float" value={data.freeFloat} />
-              <StatBox label="Shares Out" value={data.shares} />
             </div>
 
             <div style={{ marginTop: 24, height: 400 }}>
               <TVProfileWidget symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} />
             </div>
+
+            {/* Dividends & Payouts */}
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>💰 Dividends & Payouts History</h4>
+              {data.payouts && data.payouts.length > 0 ? (
+                <div style={{ background: 'var(--glass-bg)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', padding: '8px 14px', background: 'rgba(255,255,255,0.04)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Date</span>
+                    <span>Description</span>
+                    <span style={{ textAlign: 'right' }}>Type</span>
+                  </div>
+                  {data.payouts.map((p: any, i: number) => (
+                    <div key={i} style={{
+                      display: 'grid', gridTemplateColumns: '1fr 2fr 1fr',
+                      padding: '10px 14px',
+                      borderBottom: '1px solid var(--border)',
+                      fontSize: 13,
+                      alignItems: 'center',
+                    }}>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent-cyan)', fontSize: 12 }}>{p.date}</span>
+                      <span style={{ color: 'var(--text-primary)', lineHeight: 1.3 }}>{p.amount}</span>
+                      <span style={{ textAlign: 'right' }}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
+                          background: p.type === 'Dividend' ? 'rgba(0,230,118,0.1)' : 'rgba(0,212,255,0.1)',
+                          color: p.type === 'Dividend' ? '#00E676' : 'var(--accent-cyan)',
+                          border: `1px solid ${p.type === 'Dividend' ? 'rgba(0,230,118,0.3)' : 'rgba(0,212,255,0.3)'}`,
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {p.type}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: 12, background: 'var(--glass-bg)', borderRadius: 8 }}>
+                  No payout history available for {symbol}.
+                </div>
+              )}
+            </div>
           </div>
         )}
+
 
         {activeTab === 'Technicals' && (
           <div>
@@ -279,47 +382,82 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               </div>
 
               {/* DCF Card */}
-              <div style={{ flex: '1 1 300px', background: 'var(--glass-bg)', padding: 20, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <h4 style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Discounted Cash Flow (Earnings)</h4>
-                {data.intrinsicValue?.dcf?.value ? (
-                  <>
-                    <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent-cyan)' }}>
-                      {data.intrinsicValue.dcf.value.toFixed(2)} PKR
-                    </div>
-                    <div style={{ marginTop: 8, fontSize: 14 }}>
-                      Current Price: {data.price} PKR
-                    </div>
-                    <div style={{ 
-                      marginTop: 12, 
-                      padding: '8px 12px', 
-                      borderRadius: 8, 
-                      textAlign: 'center',
-                      fontWeight: 600,
-                      background: data.intrinsicValue.dcf.status === 'UNDERVALUED' ? 'var(--success-dim)' : 
-                                  data.intrinsicValue.dcf.status === 'OVERVALUED' ? 'var(--danger-dim)' : 'var(--warning-dim)',
-                      color: data.intrinsicValue.dcf.status === 'UNDERVALUED' ? 'var(--success)' : 
-                             data.intrinsicValue.dcf.status === 'OVERVALUED' ? 'var(--danger)' : 'var(--warning)',
-                    }}>
-                      {data.intrinsicValue.dcf.status}
-                    </div>
-                    <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-                      Proxy DCF model using 8% growth, 15% discount rate over 5 years. For emerging markets.
-                    </p>
-                  </>
-                ) : (
-                  <div style={{ color: 'var(--text-muted)' }}>Not enough data to calculate DCF (Missing EPS or Negative).</div>
-                )}
-              </div>
+              <InteractiveDCFCard eps={data.eps} currentPrice={data.price} />
             </div>
           </div>
         )}
 
+        {activeTab === 'Target Prices' && (
+          <div>
+            <h3 style={{ marginBottom: 16 }}>Broker Target Prices</h3>
+            {targetLoading ? (
+              <div style={{ color: 'var(--text-muted)' }}>Fetching analyst estimates...</div>
+            ) : targetData ? (
+              <div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 32 }}>
+                  <div style={{ flex: '1 1 200px', background: 'var(--glass-bg)', padding: 20, borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <h4 style={{ color: 'var(--text-secondary)', marginBottom: 8, fontSize: 13 }}>Consensus Target</h4>
+                    <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent-cyan)' }}>
+                      {targetData.averageTarget} PKR
+                    </div>
+                    <div style={{ marginTop: 8, color: targetData.upside > 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
+                      {targetData.upside > 0 ? '+' : ''}{targetData.upside}% Upside
+                    </div>
+                  </div>
+                  <div style={{ flex: '1 1 200px', background: 'var(--glass-bg)', padding: 20, borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <h4 style={{ color: 'var(--text-secondary)', marginBottom: 8, fontSize: 13 }}>Consensus Rating</h4>
+                    <div style={{ fontSize: 24, fontWeight: 800, marginTop: 8,
+                      color: targetData.consensusRating.includes('BUY') ? 'var(--success)' : targetData.consensusRating.includes('SELL') ? 'var(--danger)' : 'var(--warning)'
+                     }}>
+                      {targetData.consensusRating}
+                    </div>
+                  </div>
+                </div>
+
+                <h4 style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>Broker Breakdown</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {targetData.brokers.map((broker: any, idx: number) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', padding: 16, borderRadius: 8 }}>
+                      <div style={{ fontWeight: 600 }}>{broker.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                        <div style={{ 
+                          padding: '4px 12px', borderRadius: 4, fontSize: 12, fontWeight: 700,
+                          background: broker.rating.includes('BUY') ? 'var(--success-dim)' : broker.rating.includes('SELL') ? 'var(--danger-dim)' : 'var(--warning-dim)',
+                          color: broker.rating.includes('BUY') ? 'var(--success)' : broker.rating.includes('SELL') ? 'var(--danger)' : 'var(--warning)'
+                        }}>
+                          {broker.rating}
+                        </div>
+                        <div style={{ fontWeight: 700, width: 100, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>
+                          {broker.target.toFixed(2)} PKR
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {targetData.isSimulated && (
+                  <p style={{ marginTop: 24, fontSize: 12, color: 'var(--text-muted)' }}>
+                    * Note: Target prices shown are generated proxies based on the current market price for demonstration purposes. Premium API integration required for real-time broker estimates.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div style={{ color: 'var(--text-muted)' }}>Failed to load target prices.</div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'Recommendations' && (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <h3 style={{ marginBottom: 16 }}>Investment Recommendations</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Based on technical indicators and moving averages.</p>
-            <div style={{ maxWidth: 500, margin: '0 auto', height: 450 }}>
-               <TVTechnicalWidget symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} />
+          <div style={{ padding: '0 20px 40px' }}>
+            <h3 style={{ marginBottom: 24, textAlign: 'center' }}>Future Recommendations</h3>
+            
+            <ScoreDisplayCard score={data.score} />
+
+            <div style={{ textAlign: 'center', marginTop: 40 }}>
+              <h4 style={{ marginBottom: 16, color: 'var(--text-secondary)' }}>Technical Analysis</h4>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Based on technical indicators and moving averages.</p>
+              <div style={{ maxWidth: 500, margin: '0 auto', height: 450 }}>
+                 <TVTechnicalWidget symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} />
+              </div>
             </div>
           </div>
         )}

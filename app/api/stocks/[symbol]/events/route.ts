@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
+import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,21 +53,17 @@ async function fetchCompanyAnnouncements(symbol: string) {
 
   const body = new URLSearchParams(payload as any).toString();
 
-  const res = await fetch('https://dps.psx.com.pk/announcements', {
-    method: 'POST',
+  const res = await axios.post('https://dps.psx.com.pk/announcements', body, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
       'Content-Type': 'application/x-www-form-urlencoded',
       'X-Requested-With': 'XMLHttpRequest',
       'Referer': 'https://dps.psx.com.pk/announcements/companies',
     },
-    body,
-    next: { revalidate: 600 },
+    timeout: 5000
   });
 
-  if (!res.ok) throw new Error(`PSX returned ${res.status}`);
-
-  const html = await res.text();
+  const html = res.data;
   const $ = cheerio.load(html);
   const boardMeetings: any[] = [];
   const financialResults: any[] = [];

@@ -13,16 +13,14 @@ function TVProfileWidget({ symbol }: { symbol: string }) {
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-symbol-profile.js';
     script.type = 'text/javascript';
     script.async = true;
-    script.innerHTML = `
-      {
-        "width": "100%",
-        "height": "100%",
-        "isTransparent": true,
-        "colorTheme": "dark",
-        "symbol": "PSX:${symbol}",
-        "locale": "en"
-      }
-    `;
+    script.innerHTML = JSON.stringify({
+      width: "100%",
+      height: "100%",
+      colorTheme: "dark",
+      isTransparent: true,
+      symbol: symbol.includes(':') ? symbol : `KARACHI:${symbol}`,
+      locale: "en"
+    });
     container.current.appendChild(script);
   }, [symbol]);
 

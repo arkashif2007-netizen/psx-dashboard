@@ -3,6 +3,7 @@ import { getCompanyDetail } from '@/lib/scrapers/psx';
 import { calculateGrahamNumber, evaluateGrahamValue } from '@/lib/calculations/graham';
 import { calculateDCF, evaluateDCFValue } from '@/lib/calculations/dcf';
 import { getAdvancedFundamentals } from '@/lib/scrapers/tradingview';
+import { calculateFundamentalScore } from '@/lib/calculations/scoring';
 import cache, { TTL } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
@@ -56,7 +57,19 @@ export async function GET(
       intrinsicValue: {
         graham: { value: grahamValue, status: grahamStatus },
         dcf: { value: dcfValue, status: dcfStatus }
-      }
+      },
+      score: calculateFundamentalScore({
+        pe: advancedFundamentals?.pe ?? detail.pe,
+        pb: advancedFundamentals?.pb ?? (effectiveBvps && detail.price ? (detail.price / effectiveBvps) : null),
+        evToEbitda: advancedFundamentals?.evToEbitda,
+        roe: advancedFundamentals?.roe,
+        roa: advancedFundamentals?.roa,
+        netMargin: advancedFundamentals?.netMargin,
+        debtToEquity: advancedFundamentals?.debtToEquity,
+        currentRatio: advancedFundamentals?.currentRatio,
+        grahamStatus,
+        dcfStatus
+      })
     };
 
     cache.set(CACHE_KEY, enrichedDetail, TTL.STOCK_PRICE);

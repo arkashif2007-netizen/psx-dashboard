@@ -23,7 +23,7 @@ export default function KSEWidget({ height = 300, compact = false, symbol = 'KSE
     script.async = true;
     script.innerHTML = JSON.stringify({
       autosize: true,
-      symbol: `PSX:${symbol}`,
+      symbol: symbol ? (symbol.includes(':') ? symbol : `KARACHI:${symbol}`) : 'KARACHI:KSE100',
       interval: compact ? '30' : 'D',
       timezone: 'Asia/Karachi',
       theme: 'dark',
