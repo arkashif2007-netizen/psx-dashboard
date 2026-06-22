@@ -3,6 +3,7 @@
 import IndexCards from '@/components/market/IndexCards';
 import GainersLosers from '@/components/market/GainersLosers';
 import KSEWidgetWrapper from '@/components/layout/KSEWidgetWrapper';
+import FipiLipiMiniChart from '@/components/market/FipiLipiMiniChart';
 
 export default function HomePage() {
   return (
@@ -63,7 +64,21 @@ export default function HomePage() {
         <IndexCards />
       </section>
 
+      {/* ── FIPI / LIPI MINI CHART ───────────────────────── */}
+      <section style={{ marginBottom: 20 }} className="animate-fade-up">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div className="section-title">FIPI / LIPI Flow</div>
+          <a href="/fipi-lipi" style={{ fontSize: 12, color: 'var(--accent-cyan)', textDecoration: 'none', fontWeight: 600 }}>
+            Full View →
+          </a>
+        </div>
+        <div className="glass-card" style={{ padding: '12px 12px 8px' }}>
+          <FipiLipiMiniChart />
+        </div>
+      </section>
+
       {/* ── KSE-100 CHART ───────────────────────────────────── */}
+
       <section style={{ marginBottom: 20 }} className="animate-fade-up">
         <div className="section-title" style={{ marginBottom: 12 }}>
           KSE-100 Live Chart

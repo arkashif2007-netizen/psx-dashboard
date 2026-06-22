@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PSX Dashboard</string>
+    <string name="title_activity_main">PSX Dashboard</string>
+    <string name="package_name">com.netizen.psxdashboard</string>
+    <string name="custom_url_scheme">com.netizen.psxdashboard</string>
+</resources>

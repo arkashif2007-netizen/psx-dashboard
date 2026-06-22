@@ -7,6 +7,7 @@ import MarketStatus from '@/components/layout/MarketStatus';
 import TVTechnicalWidget from '@/components/stocks/StockDetail/TVTechnicalWidget';
 import TVProfileWidget from '@/components/stocks/StockDetail/TVProfileWidget';
 import CustomNewsWidget from '@/components/market/CustomNewsWidget';
+import FipiLipiMiniChart from '@/components/market/FipiLipiMiniChart';
 
 const TABS = [
   'Overview',
@@ -340,12 +341,38 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
           </div>
         )}
 
-        {/* Other tabs placeholder */}
-        {['Chart Patterns', 'FIPI/LIPI', 'Day Trade & Swing'].includes(activeTab) && (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🚧</div>
-            <h3>{activeTab}</h3>
-            <p>This module requires premium data access and is planned for Phase 2.</p>
+        {/* Chart Patterns tab */}
+        {activeTab === 'Chart Patterns' && (
+          <div>
+            <h3 style={{ marginBottom: 16 }}>Chart Pattern Analysis</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
+              Advanced pattern recognition using TradingView's technical engine.
+            </p>
+            <div style={{ height: 500, borderRadius: 12, overflow: 'hidden' }}>
+              <KSEWidgetWrapper symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} height={500} />
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Technical Summary</h4>
+              <div style={{ height: 450 }}>
+                <TVTechnicalWidget symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FIPI/LIPI tab */}
+        {activeTab === 'FIPI/LIPI' && (
+          <div>
+            <h3 style={{ marginBottom: 8 }}>FIPI / LIPI Institutional Flow</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
+              Foreign & Local Institutional Portfolio Investment flow. Values in millions.
+            </p>
+            <FipiLipiMiniChart />
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <a href="/fipi-lipi" style={{ color: 'var(--accent-cyan)', fontSize: 13, fontWeight: 600 }}>
+                View Full FIPI/LIPI Dashboard →
+              </a>
+            </div>
           </div>
         )}
       </div>
@@ -355,10 +382,18 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
 function StatBox({ label, value, suffix = '' }: { label: string, value: any, suffix?: string }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', color: value ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-        {value ? `${value}${suffix}` : '—'}
+    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+      <div style={{
+        fontSize: 13,
+        fontWeight: 600,
+        fontFamily: 'JetBrains Mono, monospace',
+        color: value ? 'var(--text-primary)' : 'var(--text-muted)',
+        wordBreak: 'break-all',
+        overflowWrap: 'break-word',
+        lineHeight: 1.3,
+      }}>
+        {value !== null && value !== undefined && value !== '' ? `${value}${suffix}` : '—'}
       </div>
     </div>
   );
