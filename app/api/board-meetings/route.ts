@@ -1,57 +1,70 @@
 import { NextResponse } from 'next/server';
+import * as cheerio from 'cheerio';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // ─── LIVE scrape from PSX corporate board meetings page ───────────────────────
-// URL: https://dps.psx.com.pk/corporate/board-meeting
+// URL: https://dps.psx.com.pk/announcements
 // PSX posts upcoming board meeting notices here in real time.
 
 async function scrapeLiveBoardMeetings() {
-  const res = await fetch('https://dps.psx.com.pk/corporate/board-meeting', {
+  const payload = {
+    type: 'C',
+    symbol: '',
+    query: 'Board Meeting',
+    count: 50,
+    offset: 0,
+    date_from: '',
+    date_to: '',
+    page: 'annc'
+  };
+
+  const body = new URLSearchParams(payload as any).toString();
+
+  const res = await fetch('https://dps.psx.com.pk/announcements', {
+    method: 'POST',
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
-      'Referer': 'https://dps.psx.com.pk/',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': 'https://dps.psx.com.pk/announcements/companies',
     },
-    next: { revalidate: 900 }, // cache 15 min
+    body,
+    next: { revalidate: 600 }, // Cache 10 min
   });
 
   if (!res.ok) throw new Error(`PSX returned ${res.status}`);
 
   const html = await res.text();
-
-  // PSX renders board meeting data in a <table class="tbl"> format
+  const $ = cheerio.load(html);
   const rows: any[] = [];
-  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  const strip = (s: string) =>
-    s.replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&#[0-9]+;/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
 
-  let trMatch;
-  while ((trMatch = trRegex.exec(html)) !== null) {
-    const inner = trMatch[1];
+  $('table tr').each((_, tr) => {
     const cells: string[] = [];
-    const tdReg = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-    let tdMatch;
-    while ((tdMatch = tdReg.exec(inner)) !== null) {
-      cells.push(strip(tdMatch[1]));
+    $(tr).find('td').each((_, td) => {
+      cells.push($(td).text().trim());
+    });
+    if (cells.length >= 5) {
+      const date = cells[0];
+      const time = cells[1];
+      const symbol = cells[2].toUpperCase();
+      const companyName = cells[3];
+      const title = cells[4];
+
+      const tLower = title.toLowerCase();
+      const isBM = tLower.includes('board meeting') || tLower.includes('board of directors meeting') || tLower.includes('bod meeting') || tLower.includes('intimation of');
+      if (isBM) {
+        rows.push({
+          meetingDate: `${date} ${time}`,
+          symbol,
+          companyName,
+          agenda: title,
+          category: 'Board Meeting',
+        });
+      }
     }
-    if (cells.length >= 3 && cells[0] && cells[0] !== 'Date') {
-      rows.push({
-        meetingDate: cells[0] || '',
-        symbol: (cells[1] || '').toUpperCase(),
-        companyName: cells[2] || cells[1] || '',
-        agenda: cells[3] || '',
-        category: cells[4] || '',
-      });
-    }
-  }
+  });
 
   return rows;
 }

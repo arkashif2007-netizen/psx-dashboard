@@ -1,36 +1,44 @@
 import { NextResponse } from 'next/server';
+import * as cheerio from 'cheerio';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // ─── LIVE scrape from PSX financial results page ──────────────────────────────
-// URL: https://dps.psx.com.pk/corporate/financial-result
+// URL: https://dps.psx.com.pk/announcements
 // PSX posts financial results here as companies publish them.
 
 async function scrapeLiveFinancialResults() {
-  const res = await fetch('https://dps.psx.com.pk/corporate/financial-result', {
+  const payload = {
+    type: 'C',
+    symbol: '',
+    query: 'Financial Results',
+    count: 100, // Fetch more because we filter some out
+    offset: 0,
+    date_from: '',
+    date_to: '',
+    page: 'annc'
+  };
+
+  const body = new URLSearchParams(payload as any).toString();
+
+  const res = await fetch('https://dps.psx.com.pk/announcements', {
+    method: 'POST',
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
-      'Referer': 'https://dps.psx.com.pk/',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': 'https://dps.psx.com.pk/announcements/companies',
     },
-    next: { revalidate: 900 },
+    body,
+    next: { revalidate: 600 },
   });
 
   if (!res.ok) throw new Error(`PSX returned ${res.status}`);
 
   const html = await res.text();
-
+  const $ = cheerio.load(html);
   const rows: any[] = [];
-  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  const strip = (s: string) =>
-    s.replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&#[0-9]+;/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
 
   function extractResultType(title: string): string {
     const t = title.toLowerCase();
@@ -44,26 +52,47 @@ async function scrapeLiveFinancialResults() {
     return 'Announcement';
   }
 
-  let trMatch;
-  while ((trMatch = trRegex.exec(html)) !== null) {
-    const inner = trMatch[1];
-    const cells: string[] = [];
-    const tdReg = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-    let tdMatch;
-    while ((tdMatch = tdReg.exec(inner)) !== null) {
-      cells.push(strip(tdMatch[1]));
-    }
-    if (cells.length >= 3 && cells[0] && cells[0] !== 'Date') {
-      const title = cells[3] || cells[2] || '';
-      rows.push({
-        resultDate: cells[0] || '',
-        symbol: (cells[1] || '').toUpperCase(),
-        companyName: cells[2] || cells[1] || '',
-        period: title,
-        resultType: extractResultType(title),
-      });
-    }
+  function isFinancialResult(title: string): boolean {
+    const t = title.toLowerCase();
+    if (t.includes('other than') || t.includes('other tan')) return false;
+    if (t.includes('notice of') || t.includes('notice for') || t.includes('agenda')) return false;
+    if (t.includes('budget') || t.includes('election') || t.includes('directors') || t.includes('resignation')) return false;
+    if (t.includes('book closure') || t.includes('dividend distribution')) return false;
+    
+    return t.includes('financial result') || 
+           t.includes('financial statements') || 
+           t.includes('quarter ended') || 
+           t.includes('half year ended') || 
+           t.includes('year ended') || 
+           t.includes('period ended') ||
+           t.includes('quarterly accounts') ||
+           t.includes('annual accounts') ||
+           t.includes('half yearly accounts');
   }
+
+  $('table tr').each((_, tr) => {
+    const cells: string[] = [];
+    $(tr).find('td').each((_, td) => {
+      cells.push($(td).text().trim());
+    });
+    if (cells.length >= 5) {
+      const date = cells[0];
+      const time = cells[1];
+      const symbol = cells[2].toUpperCase();
+      const companyName = cells[3];
+      const title = cells[4];
+
+      if (isFinancialResult(title)) {
+        rows.push({
+          resultDate: `${date} ${time}`,
+          symbol,
+          companyName,
+          period: title,
+          resultType: extractResultType(title),
+        });
+      }
+    }
+  });
 
   return rows;
 }
