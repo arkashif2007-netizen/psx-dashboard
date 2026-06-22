@@ -67,7 +67,7 @@ export default function ScoreDisplayCard({ score }: { score: ScoreResult | null 
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 24px' }}>
         <Progress label="Valuation" value={score.valuation} max={30} colorOverride="var(--accent-cyan)" />
         <Progress label="Profitability" value={score.profitability} max={30} colorOverride="#8b5cf6" />
         <Progress label="Financial Health" value={score.health} max={20} colorOverride="#10b981" />
