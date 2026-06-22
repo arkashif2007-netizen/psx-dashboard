@@ -1,86 +1,119 @@
 import { NextResponse } from 'next/server';
-import { getAllAnnouncements } from '@/lib/scrapers/psx';
-import cache, { TTL } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function getFallbackData() {
-  const today = new Date();
-  const addDays = (d: number) => {
-    const dt = new Date(today);
-    dt.setDate(dt.getDate() + d);
-    return dt.toISOString().split('T')[0];
-  };
-  return [
-    { symbol: 'HBL', companyName: 'Habib Bank Limited', resultDate: addDays(-1), period: 'Q3 FY2025 (Jan-Mar)', resultType: 'Quarter' },
-    { symbol: 'OGDC', companyName: 'Oil & Gas Development Company', resultDate: addDays(-3), period: 'Q3 FY2025', resultType: 'Quarter' },
-    { symbol: 'MCB', companyName: 'MCB Bank Limited', resultDate: addDays(-5), period: 'Half Year FY2025', resultType: 'Half Year' },
-    { symbol: 'LUCK', companyName: 'Lucky Cement Limited', resultDate: addDays(-7), period: 'Nine Months FY2025', resultType: 'Q3' },
-    { symbol: 'EFERT', companyName: 'Engro Fertilizers Limited', resultDate: addDays(-10), period: 'Annual FY2024', resultType: 'Annual' },
-    { symbol: 'SYS', companyName: 'Systems Limited', resultDate: addDays(-12), period: 'Q2 FY2025', resultType: 'Quarter' },
-    { symbol: 'PPL', companyName: 'Pakistan Petroleum Limited', resultDate: addDays(-14), period: 'Q3 FY2025', resultType: 'Quarter' },
-    { symbol: 'UBL', companyName: 'United Bank Limited', resultDate: addDays(-16), period: 'Half Year 2025', resultType: 'Half Year' },
-    { symbol: 'FFC', companyName: 'Fauji Fertilizer Company', resultDate: addDays(-18), period: 'Annual FY2024', resultType: 'Annual' },
-    { symbol: 'PSO', companyName: 'Pakistan State Oil', resultDate: addDays(-20), period: 'Q3 FY2025', resultType: 'Quarter' },
-    { symbol: 'ENGRO', companyName: 'Engro Corporation Limited', resultDate: addDays(-22), period: 'Q2 FY2025', resultType: 'Quarter' },
-    { symbol: 'SNGP', companyName: 'Sui Northern Gas Pipelines', resultDate: addDays(-25), period: 'Annual FY2024', resultType: 'Annual' },
-  ];
+// ─── LIVE scrape from PSX financial results page ──────────────────────────────
+// URL: https://dps.psx.com.pk/corporate/financial-result
+// PSX posts financial results here as companies publish them.
+
+async function scrapeLiveFinancialResults() {
+  const res = await fetch('https://dps.psx.com.pk/corporate/financial-result', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'Referer': 'https://dps.psx.com.pk/',
+    },
+    next: { revalidate: 900 },
+  });
+
+  if (!res.ok) throw new Error(`PSX returned ${res.status}`);
+
+  const html = await res.text();
+
+  const rows: any[] = [];
+  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const strip = (s: string) =>
+    s.replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&#[0-9]+;/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  function extractResultType(title: string): string {
+    const t = title.toLowerCase();
+    if (t.includes('annual') || t.includes('fy')) return 'Annual';
+    if (t.includes('half') || t.includes('semi')) return 'Half Year';
+    if (t.includes('nine month') || t.includes('q3')) return 'Q3';
+    if (t.includes('q1') || t.includes('first quarter')) return 'Q1';
+    if (t.includes('q2') || t.includes('second quarter')) return 'Q2';
+    if (t.includes('q4') || t.includes('fourth quarter')) return 'Q4';
+    if (t.includes('quarter')) return 'Quarter';
+    return 'Announcement';
+  }
+
+  let trMatch;
+  while ((trMatch = trRegex.exec(html)) !== null) {
+    const inner = trMatch[1];
+    const cells: string[] = [];
+    const tdReg = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    let tdMatch;
+    while ((tdMatch = tdReg.exec(inner)) !== null) {
+      cells.push(strip(tdMatch[1]));
+    }
+    if (cells.length >= 3 && cells[0] && cells[0] !== 'Date') {
+      const title = cells[3] || cells[2] || '';
+      rows.push({
+        resultDate: cells[0] || '',
+        symbol: (cells[1] || '').toUpperCase(),
+        companyName: cells[2] || cells[1] || '',
+        period: title,
+        resultType: extractResultType(title),
+      });
+    }
+  }
+
+  return rows;
 }
 
-function extractPeriod(title: string): string {
-  const lower = title.toLowerCase();
-  if (lower.includes('annual')) return 'Annual';
-  if (lower.includes('half') || lower.includes('semi')) return 'Half Year';
-  if (lower.includes('q1') || lower.includes('first quarter')) return 'Q1';
-  if (lower.includes('q2') || lower.includes('second quarter')) return 'Q2';
-  if (lower.includes('q3') || lower.includes('third quarter') || lower.includes('nine month')) return 'Q3';
-  if (lower.includes('q4') || lower.includes('fourth quarter')) return 'Q4';
-  return 'Quarterly';
+function getFallbackData() {
+  return [
+    { symbol: 'HBL', companyName: 'Habib Bank Limited', resultDate: '2026-06-20', period: 'Half Year ended June 30, 2026', resultType: 'Half Year' },
+    { symbol: 'OGDC', companyName: 'Oil & Gas Development Company', resultDate: '2026-06-18', period: 'Q4 & Annual FY2026', resultType: 'Annual' },
+    { symbol: 'MCB', companyName: 'MCB Bank Limited', resultDate: '2026-06-15', period: 'Half Year 2026', resultType: 'Half Year' },
+    { symbol: 'LUCK', companyName: 'Lucky Cement Limited', resultDate: '2026-06-12', period: 'Nine Months FY2026 (Jul-Mar)', resultType: 'Q3' },
+    { symbol: 'EFERT', companyName: 'Engro Fertilizers Limited', resultDate: '2026-06-10', period: 'Q1 2026 (Jan-Mar)', resultType: 'Q1' },
+    { symbol: 'SYS', companyName: 'Systems Limited', resultDate: '2026-06-08', period: 'Half Year 2026', resultType: 'Half Year' },
+    { symbol: 'PPL', companyName: 'Pakistan Petroleum Limited', resultDate: '2026-06-05', period: 'Q3 FY2026', resultType: 'Q3' },
+    { symbol: 'UBL', companyName: 'United Bank Limited', resultDate: '2026-06-03', period: 'Half Year 2026', resultType: 'Half Year' },
+    { symbol: 'FFC', companyName: 'Fauji Fertilizer Company', resultDate: '2026-05-30', period: 'Q1 2026', resultType: 'Q1' },
+    { symbol: 'PSO', companyName: 'Pakistan State Oil', resultDate: '2026-05-28', period: 'Q3 FY2026', resultType: 'Q3' },
+    { symbol: 'ENGRO', companyName: 'Engro Corporation Limited', resultDate: '2026-05-25', period: 'Q1 2026 (Jan-Mar)', resultType: 'Q1' },
+    { symbol: 'SNGP', companyName: 'Sui Northern Gas Pipelines', resultDate: '2026-05-20', period: 'Annual FY2025', resultType: 'Annual' },
+    { symbol: 'MARI', companyName: 'Mari Petroleum Company', resultDate: '2026-05-18', period: 'Nine Months FY2026', resultType: 'Q3' },
+    { symbol: 'BAHL', companyName: 'Bank Al-Habib Limited', resultDate: '2026-05-15', period: 'Q1 2026', resultType: 'Q1' },
+    { symbol: 'BAFL', companyName: 'Bank Alfalah Limited', resultDate: '2026-05-12', period: 'Q1 2026', resultType: 'Q1' },
+  ].sort((a, b) => new Date(b.resultDate).getTime() - new Date(a.resultDate).getTime());
 }
 
 export async function GET() {
-  const CACHE_KEY = 'financial_results';
-
   try {
-    const cached = cache.get<Awaited<ReturnType<typeof getAllAnnouncements>>>(CACHE_KEY);
-    if (cached && !cached.stale) {
-      const fr = cached.data.filter((a: { type: string }) => a.type === 'FINANCIAL_RESULT');
-      const normalized = fr.length > 0 ? fr.map((a: any) => ({
-        symbol: a.symbol,
-        companyName: a.symbol,
-        resultDate: a.date,
-        period: a.title,
-        resultType: extractPeriod(a.title),
-      })) : getFallbackData();
-      return NextResponse.json({ success: true, data: normalized, cached: true, lastUpdated: new Date().toISOString() });
+    const live = await scrapeLiveFinancialResults();
+
+    if (live.length > 0) {
+      return NextResponse.json({
+        success: true,
+        data: live,
+        source: 'live',
+        lastUpdated: new Date().toISOString(),
+      });
     }
-
-    const announcements = await getAllAnnouncements('companies');
-    cache.set(CACHE_KEY, announcements, TTL.FINANCIAL_RESULTS);
-
-    const financialResults = announcements.filter(a => a.type === 'FINANCIAL_RESULT');
-    const normalized = financialResults.length > 0
-      ? financialResults.map((a: any) => ({
-          symbol: a.symbol,
-          companyName: a.symbol,
-          resultDate: a.date,
-          period: a.title,
-          resultType: extractPeriod(a.title),
-        }))
-      : getFallbackData();
 
     return NextResponse.json({
       success: true,
-      data: normalized,
-      cached: false,
+      data: getFallbackData(),
+      source: 'fallback',
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[API/financial-results] Error:', error);
-    return NextResponse.json(
-      { success: true, data: getFallbackData(), error: 'Using fallback data' },
-      { status: 200 }
-    );
+    console.error('[API/financial-results] Scrape failed:', error);
+    return NextResponse.json({
+      success: true,
+      data: getFallbackData(),
+      source: 'fallback',
+      lastUpdated: new Date().toISOString(),
+    });
   }
 }

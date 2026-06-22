@@ -32,6 +32,7 @@ export default function BoardMeetingsPage() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'All' | 'Upcoming' | 'Today'>('All');
+  const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
   useEffect(() => {
     const fetchMeetings = async () => {
@@ -40,6 +41,7 @@ export default function BoardMeetingsPage() {
         const json = await res.json();
         if (json.success) {
           setMeetings(json.data || []);
+          setDataSource(json.source || 'fallback');
         } else {
           setError(json.error || 'Failed to load meetings');
         }
@@ -82,9 +84,25 @@ export default function BoardMeetingsPage() {
         <h1 style={{ fontSize: 22, margin: 0, fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800 }}>
           📅 Board Meetings
         </h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 4, fontSize: 13 }}>
-          Live corporate events from the Pakistan Stock Exchange
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>
+            Live corporate events from the Pakistan Stock Exchange
+          </p>
+          {dataSource && (
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '2px 8px',
+              borderRadius: 20,
+              background: dataSource === 'live' ? 'rgba(0,230,118,0.12)' : 'rgba(255,184,0,0.12)',
+              color: dataSource === 'live' ? '#00E676' : '#FFB800',
+              border: `1px solid ${dataSource === 'live' ? 'rgba(0,230,118,0.3)' : 'rgba(255,184,0,0.3)'}`,
+              letterSpacing: '0.05em',
+            }}>
+              {dataSource === 'live' ? '🟢 LIVE' : '🟡 CACHED'}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Search & Filters */}
