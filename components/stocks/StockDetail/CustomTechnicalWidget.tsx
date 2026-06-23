@@ -84,6 +84,16 @@ export default function CustomTechnicalWidget({ data }: CustomTechnicalWidgetPro
   const trendAction = masterMomentum >= 80 ? 'STRONG BUY' : masterMomentum >= 60 ? 'BUY' : masterMomentum <= 20 ? 'STRONG SELL' : masterMomentum <= 40 ? 'SELL' : 'NEUTRAL';
   const trendActionColor = masterMomentum >= 60 ? 'var(--success)' : masterMomentum <= 40 ? 'var(--danger)' : 'var(--text-secondary)';
 
+  // Trade Setup Calculations
+  const buyPrice = price;
+  let targetPrice = adv.pivotR1 ?? (price ? price * 1.05 : null);
+  let stopLoss = adv.pivotS1 ?? (price ? price * 0.95 : null);
+
+  if (trendAction.includes('SELL')) {
+    targetPrice = adv.pivotS1 ?? (price ? price * 0.95 : null);
+    stopLoss = adv.pivotR1 ?? (price ? price * 1.05 : null);
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       
@@ -98,6 +108,24 @@ export default function CustomTechnicalWidget({ data }: CustomTechnicalWidgetPro
         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
           Momentum Score: {masterMomentum.toFixed(0)}/100
         </p>
+
+        {/* Trade Setup */}
+        {trendAction !== 'NEUTRAL' && buyPrice && (
+          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'space-around', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{trendAction.includes('SELL') ? 'Sell Near' : 'Entry Price'}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 }}>{buyPrice.toFixed(2)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Target</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: trendAction.includes('SELL') ? 'var(--danger)' : 'var(--success)', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 }}>{targetPrice?.toFixed(2) ?? '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Stop Loss</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 }}>{stopLoss?.toFixed(2) ?? '—'}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
