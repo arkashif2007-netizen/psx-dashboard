@@ -60,7 +60,6 @@ export interface TVAdvancedFundamentals {
   candleEngulfingBearish: number | null;
   chaikin: number | null;
   // --- Phase 8: Long-Term Investing Metrics ---
-  fcfMargin: number | null;
   capitalExpenditures: number | null;
   freeCashFlow: number | null;
 }
