@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  const CACHE_KEY = 'global_fundamental_ranking_v4';
+  const CACHE_KEY = 'global_fundamental_ranking_v6';
 
   try {
     const cached = cache.get(CACHE_KEY);
@@ -93,14 +93,11 @@ export async function GET() {
     // Sort descending by score
     .sort((a: any, b: any) => b.score - a.score);
 
-    // Grab top 100
-    const top100 = rankedStocks.slice(0, 100);
-
-    cache.set(CACHE_KEY, top100, TTL.ALL_STOCKS);
+    cache.set(CACHE_KEY, rankedStocks, TTL.ALL_STOCKS);
 
     return NextResponse.json({
       success: true,
-      data: top100,
+      data: rankedStocks,
       cached: false
     });
   } catch (error) {

@@ -48,7 +48,8 @@ export default function FundamentalRankingsPage() {
 
   const getVerdictColor = (verdict: string) => {
     if (verdict.includes('BUY')) return 'var(--success)';
-    if (verdict.includes('SELL')) return 'var(--danger)';
+    if (verdict.includes('SELL') || verdict.includes('AVOID')) return 'var(--danger)';
+    if (verdict.includes('UNDERPERFORM')) return '#f97316';
     return 'var(--text-muted)';
   };
 
@@ -69,11 +70,16 @@ export default function FundamentalRankingsPage() {
           background: 'var(--accent-cyan)', opacity: 0.1, filter: 'blur(50px)', borderRadius: '50%'
         }} />
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>
-          Fundamental Ranking
+          Fundamental Rankings
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5, maxWidth: '90%' }}>
-          Top PSX stocks ranked by 20 core financial parameters including Valuation, Profitability, and Health.
+          All actively traded PSX stocks ranked by 20 core financial parameters including Valuation, Profitability, and Health. Scroll to the bottom to see Avoid / Sell recommendations.
         </p>
+        {!loading && stocks.length > 0 && (
+          <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: 'var(--accent-cyan)' }}>
+            Showing {stocks.length} Stocks
+          </div>
+        )}
       </div>
 
       {/* List */}

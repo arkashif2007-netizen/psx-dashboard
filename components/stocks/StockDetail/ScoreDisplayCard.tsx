@@ -20,9 +20,12 @@ export default function ScoreDisplayCard({ score }: { score: ScoreResult | null 
   if (score.verdict === 'STRONG BUY' || score.verdict === 'BUY') {
     color = 'var(--success)';
     bg = 'var(--success-dim)';
-  } else if (score.verdict === 'STRONG SELL' || score.verdict === 'SELL') {
+  } else if (score.verdict.includes('AVOID') || score.verdict.includes('SELL')) {
     color = 'var(--danger)';
     bg = 'var(--danger-dim)';
+  } else if (score.verdict === 'UNDERPERFORM') {
+    color = '#f97316'; // orange
+    bg = 'rgba(249, 115, 22, 0.1)';
   } else {
     color = 'var(--warning)';
     bg = 'var(--warning-dim)';

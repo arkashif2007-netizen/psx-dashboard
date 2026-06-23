@@ -31,7 +31,7 @@ export interface ScoreResult {
   profitability: number; // 0-40
   health: number; // 0-30
   valuation: number; // 0-30
-  verdict: 'STRONG BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG SELL';
+  verdict: 'STRONG BUY' | 'BUY' | 'HOLD / WATCH' | 'UNDERPERFORM' | 'AVOID / SELL';
 }
 
 export function calculateFundamentalScore(data: ScoringData, medians?: SectorMedians): ScoreResult {
@@ -41,21 +41,23 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
 
   // Helpers for relative scoring
   const scoreHigherIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
-    if (val === null || val === undefined) return maxPts / 2; // Neutral
-    if (val < 0) return 0; // Penalty handled later or zero base
-    if (!median) return maxPts / 2;
-    if (val > median * 1.2) return maxPts; // Top tier (beats median heavily)
-    if (val >= median) return maxPts * 0.75; // Beats median
-    return maxPts * 0.25; // Below median
+    if (val === null || val === undefined) return 0; // Missing data = 0 pts
+    if (val < 0) return 0; 
+    if (!median) return maxPts * 0.5; // If no median exists, but it's positive
+    if (val >= median * 1.2) return maxPts; // Beats median by 20%+
+    if (val >= median) return maxPts * 0.75; // Above median
+    if (val >= median * 0.8) return maxPts * 0.3; // Just below median
+    return 0; // Significantly below median = 0 pts
   };
 
   const scoreLowerIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
-    if (val === null || val === undefined) return maxPts / 2;
-    if (val < 0) return 0; // usually means negative earnings/equity
-    if (!median) return maxPts / 2;
-    if (val < median * 0.8) return maxPts; // Top tier (much cheaper/safer than median)
-    if (val <= median) return maxPts * 0.75;
-    return maxPts * 0.25; // Worse than median
+    if (val === null || val === undefined) return 0; // Missing data = 0 pts
+    if (val < 0) return 0; // Negative values (e.g. negative PE) handled by explicit penalties later
+    if (!median) return maxPts * 0.5;
+    if (val <= median * 0.8) return maxPts; // Beats median by 20%+
+    if (val <= median) return maxPts * 0.75; // Above median
+    if (val <= median * 1.2) return maxPts * 0.3; // Just below median
+    return 0; // Significantly worse than median = 0 pts
   };
 
   // --- PILLAR 1: PROFITABILITY (Max 40) ---
@@ -103,12 +105,12 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
   let rawOverall = profitability + health + valuation;
   let overall = Math.max(0, Math.min(100, Math.round(rawOverall)));
 
-  let verdict: ScoreResult['verdict'] = 'HOLD';
+  let verdict: ScoreResult['verdict'] = 'HOLD / WATCH';
   if (overall >= 80) verdict = 'STRONG BUY';
   else if (overall >= 65) verdict = 'BUY';
-  else if (overall >= 50) verdict = 'HOLD';
-  else if (overall >= 35) verdict = 'SELL';
-  else verdict = 'STRONG SELL';
+  else if (overall >= 50) verdict = 'HOLD / WATCH';
+  else if (overall >= 35) verdict = 'UNDERPERFORM';
+  else verdict = 'AVOID / SELL';
 
   return {
     overall,

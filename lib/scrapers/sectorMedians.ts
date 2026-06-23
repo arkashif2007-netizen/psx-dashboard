@@ -3,7 +3,7 @@ import cache, { TTL } from '@/lib/cache';
 import { SectorMedians } from '@/lib/calculations/scoring';
 
 export async function getGlobalSectorMedians(): Promise<{ medians: Record<string, SectorMedians>, rawData: any[] }> {
-  const CACHE_KEY = 'global_sector_medians_data_v1';
+  const CACHE_KEY = 'global_sector_medians_data_v2';
   const cached = cache.get<{ medians: Record<string, SectorMedians>, rawData: any[] }>(CACHE_KEY);
 
   if (cached && !cached.stale) {
@@ -28,7 +28,10 @@ export async function getGlobalSectorMedians(): Promise<{ medians: Record<string
       "earnings_per_share_basic_ttm",
       "book_value_per_share_fq",
       "dividend_yield_recent"
-    ]
+    ],
+    filter: [{ left: "type", operation: "in_range", right: ["stock"] }],
+    sort: { sortBy: "market_cap_basic", sortOrder: "desc" },
+    range: [0, 600]
   }, {
     headers: {
       'User-Agent': 'Mozilla/5.0',
