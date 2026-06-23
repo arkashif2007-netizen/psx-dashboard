@@ -35,72 +35,115 @@ export interface ScoreResult {
 }
 
 export function calculateFundamentalScore(data: ScoringData, medians?: SectorMedians): ScoreResult {
-  let profitability = 0;
-  let health = 0;
-  let valuation = 0;
+  let earnedProfitability = 0;
+  let possibleProfitability = 0;
+  
+  let earnedHealth = 0;
+  let possibleHealth = 0;
+
+  let earnedValuation = 0;
+  let possibleValuation = 0;
 
   // Helpers for relative scoring
   const scoreHigherIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
-    if (val === null || val === undefined) return maxPts * 0.5; // Missing data (e.g. Banks lacking EV/EBITDA) gets neutral points so blue chips aren't destroyed
-    if (val < 0) return 0; 
-    if (!median) return maxPts * 0.5; // If no median exists, but it's positive
-    if (val >= median * 1.2) return maxPts; // Beats median by 20%+
-    if (val >= median) return maxPts * 0.75; // Above median
-    if (val >= median * 0.8) return maxPts * 0.3; // Just below median
-    return 0; // Significantly below median = 0 pts
+    if (val === null || val === undefined) return { earned: 0, possible: 0 }; // Exclude from evaluation
+    
+    let earned = 0;
+    if (val < 0) {
+      earned = 0;
+    } else if (!median) {
+      earned = maxPts * 0.5; // If median missing but value exists
+    } else if (val >= median * 1.2) {
+      earned = maxPts;
+    } else if (val >= median) {
+      earned = maxPts * 0.75;
+    } else if (val >= median * 0.8) {
+      earned = maxPts * 0.3;
+    }
+    
+    return { earned, possible: maxPts };
   };
 
   const scoreLowerIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
-    if (val === null || val === undefined) return maxPts * 0.5; // Missing data = neutral pts
-    if (val < 0) return 0; // Negative values (e.g. negative PE) handled by explicit penalties later
-    if (!median) return maxPts * 0.5;
-    if (val <= median * 0.8) return maxPts; // Beats median by 20%+
-    if (val <= median) return maxPts * 0.75; // Above median
-    if (val <= median * 1.2) return maxPts * 0.3; // Just below median
-    return 0; // Significantly worse than median = 0 pts
+    if (val === null || val === undefined) return { earned: 0, possible: 0 };
+    
+    let earned = 0;
+    if (val < 0) {
+      earned = 0; // Negative values handled by penalties
+    } else if (!median) {
+      earned = maxPts * 0.5;
+    } else if (val <= median * 0.8) {
+      earned = maxPts;
+    } else if (val <= median) {
+      earned = maxPts * 0.75;
+    } else if (val <= median * 1.2) {
+      earned = maxPts * 0.3;
+    }
+    
+    return { earned, possible: maxPts };
+  };
+
+  const addScore = (target: 'prof' | 'health' | 'val', result: { earned: number, possible: number }) => {
+    if (target === 'prof') {
+      earnedProfitability += result.earned;
+      possibleProfitability += result.possible;
+    } else if (target === 'health') {
+      earnedHealth += result.earned;
+      possibleHealth += result.possible;
+    } else {
+      earnedValuation += result.earned;
+      possibleValuation += result.possible;
+    }
   };
 
   // --- PILLAR 1: PROFITABILITY (Max 40) ---
-  // ROE (15), ROCE (10), Net Margin (10), Operating Margin (5)
-  profitability += scoreHigherIsBetter(data.roe, medians?.roe, 15);
-  profitability += scoreHigherIsBetter(data.roce, medians?.roce, 10);
-  profitability += scoreHigherIsBetter(data.netMargin, medians?.netMargin, 10);
-  profitability += scoreHigherIsBetter(data.operatingMargin, medians?.operatingMargin, 5);
+  addScore('prof', scoreHigherIsBetter(data.roe, medians?.roe, 15));
+  addScore('prof', scoreHigherIsBetter(data.roce, medians?.roce, 10));
+  addScore('prof', scoreHigherIsBetter(data.netMargin, medians?.netMargin, 10));
+  addScore('prof', scoreHigherIsBetter(data.operatingMargin, medians?.operatingMargin, 5));
 
   // Profitability Penalties
-  if (data.roe !== null && data.roe !== undefined && data.roe < 0) profitability -= 10;
-  if (data.netMargin !== null && data.netMargin !== undefined && data.netMargin < 0) profitability -= 10;
+  let profPenalty = 0;
+  if (data.roe !== null && data.roe !== undefined && data.roe < 0) profPenalty += 10;
+  if (data.netMargin !== null && data.netMargin !== undefined && data.netMargin < 0) profPenalty += 10;
+  earnedProfitability = Math.max(0, earnedProfitability - profPenalty);
 
   // --- PILLAR 2: HEALTH & SOLVENCY (Max 30) ---
-  // Debt to Equity (12), Current Ratio (9), Altman Z-Score (9)
-  health += scoreLowerIsBetter(data.debtToEquity, medians?.debtToEquity, 12);
-  health += scoreHigherIsBetter(data.currentRatio, medians?.currentRatio, 9);
+  addScore('health', scoreLowerIsBetter(data.debtToEquity, medians?.debtToEquity, 12));
+  addScore('health', scoreHigherIsBetter(data.currentRatio, medians?.currentRatio, 9));
   
   if (data.altmanZ !== null && data.altmanZ !== undefined) {
-    if (data.altmanZ > 2.99) health += 9;
-    else if (data.altmanZ > 1.81) health += 4.5;
-    else health += 0;
-  } else {
-    health += 4.5;
+    possibleHealth += 9;
+    if (data.altmanZ > 2.99) earnedHealth += 9;
+    else if (data.altmanZ > 1.81) earnedHealth += 4.5;
   }
 
   // Health Penalties
-  if (data.debtToEquity !== null && data.debtToEquity !== undefined && data.debtToEquity > 3) health -= 10;
+  let healthPenalty = 0;
+  if (data.debtToEquity !== null && data.debtToEquity !== undefined && data.debtToEquity > 3) healthPenalty += 10;
+  earnedHealth = Math.max(0, earnedHealth - healthPenalty);
 
   // --- PILLAR 3: VALUATION (Max 30) ---
-  // PE (10), PB (8), EV/EBITDA (8), Div Yield (4)
-  valuation += scoreLowerIsBetter(data.pe, medians?.pe, 10);
-  valuation += scoreLowerIsBetter(data.pb, medians?.pb, 8);
-  valuation += scoreLowerIsBetter(data.evToEbitda, medians?.evToEbitda, 8);
+  addScore('val', scoreLowerIsBetter(data.pe, medians?.pe, 10));
+  addScore('val', scoreLowerIsBetter(data.pb, medians?.pb, 8));
+  addScore('val', scoreLowerIsBetter(data.evToEbitda, medians?.evToEbitda, 8));
 
   if (data.dividendYield !== null && data.dividendYield !== undefined) {
-    if (data.dividendYield > 8) valuation += 4;
-    else if (data.dividendYield > 4) valuation += 2;
+    possibleValuation += 4;
+    if (data.dividendYield > 8) earnedValuation += 4;
+    else if (data.dividendYield > 4) earnedValuation += 2;
   }
 
   // Valuation Penalties
-  if (data.pe !== null && data.pe !== undefined && data.pe < 0) valuation -= 10;
-  if (data.pb !== null && data.pb !== undefined && data.pb < 0) valuation -= 10;
+  let valPenalty = 0;
+  if (data.pe !== null && data.pe !== undefined && data.pe < 0) valPenalty += 10;
+  if (data.pb !== null && data.pb !== undefined && data.pb < 0) valPenalty += 10;
+  earnedValuation = Math.max(0, earnedValuation - valPenalty);
+
+  // Normalize scores to their original maximum weights (Prof: 40, Health: 30, Val: 30)
+  const profitability = possibleProfitability > 0 ? (earnedProfitability / possibleProfitability) * 40 : 0;
+  const health = possibleHealth > 0 ? (earnedHealth / possibleHealth) * 30 : 0;
+  const valuation = possibleValuation > 0 ? (earnedValuation / possibleValuation) * 30 : 0;
 
   let rawOverall = profitability + health + valuation;
   let overall = Math.max(0, Math.min(100, Math.round(rawOverall)));
