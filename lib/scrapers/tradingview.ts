@@ -58,7 +58,17 @@ export interface TVAdvancedFundamentals {
   candleMorningStar: number | null;
   candleEngulfingBullish: number | null;
   candleEngulfingBearish: number | null;
-  chaikin: number | null;
+  // --- Phase 8: Long-Term Investing Metrics ---
+  grossMargin: number | null;
+  operatingMargin: number | null;
+  fcfMargin: number | null;
+  capitalExpenditures: number | null;
+  totalRevenue: number | null;
+  ebitda: number | null;
+  freeCashFlow: number | null;
+  netIncome: number | null;
+  roa: number | null;
+  roic: number | null;
 }
 
 export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvancedFundamentals | null> {
@@ -82,9 +92,12 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         "operating_margin",
         "net_margin",
         "free_cash_flow_margin_ttm",
+        "capital_expenditures_ttm",
+        "free_cash_flow_ttm",
         "ebitda",
         "total_revenue",
         "net_income",
+        "return_on_invested_capital",
         "earnings_per_share_basic_ttm",
         "market_cap_basic",
         "enterprise_value_ebitda",
@@ -149,45 +162,47 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         grossMargin: d[12] ?? null,
         operatingMargin: d[13] ?? null,
         netMargin: d[14] ?? null,
-        freeCashFlowMargin: d[15] ?? null,
-        ebitda: d[16] ?? null,
-        totalRevenue: d[17] ?? null,
-        netIncome: d[18] ?? null,
-        eps: d[19] ?? null,
-        marketCap: d[20] ?? null,
-        evToEbitda: d[21] ?? null,
-        recommendMA: d[22] ?? null,
-        recommendOther: d[23] ?? null,
-        rsi: d[24] ?? null,
-        macd: d[25] ?? null,
-        macdSignal: d[26] ?? null,
-        sma50: d[27] ?? null,
-        sma200: d[28] ?? null,
-        ema20: d[29] ?? null,
-        bbLower: d[30] ?? null,
-        bbUpper: d[31] ?? null,
-        roic: d[32] ?? null,
-        cash: d[33] ?? null,
-        totalDebt: d[34] ?? null,
-        netDebt: d[35] ?? null,
-        beta: d[36] ?? null,
-        perfY: d[37] ?? null,
-        sector: d[38] ?? null,
-        obv: d[39] ?? null,
-        adx: d[40] ?? null,
-        aroonUp: d[41] ?? null,
-        aroonDown: d[42] ?? null,
-        pivotM: d[43] ?? null,
-        pivotR1: d[44] ?? null,
-        pivotS1: d[45] ?? null,
-        fibR1: d[46] ?? null,
-        fibS1: d[47] ?? null,
-        candleDoji: d[48] ?? null,
-        candleHammer: d[49] ?? null,
-        candleMorningStar: d[50] ?? null,
-        candleEngulfingBullish: d[51] ?? null,
-        candleEngulfingBearish: d[52] ?? null,
-        chaikin: d[53] ?? null,
+        fcfMargin: d[15] ?? null,
+        capitalExpenditures: d[16] ?? null,
+        freeCashFlow: d[17] ?? null,
+        ebitda: d[18] ?? null,
+        totalRevenue: d[19] ?? null,
+        netIncome: d[20] ?? null,
+        roic: d[21] ?? null,
+        eps: d[22] ?? null,
+        marketCap: d[23] ?? null,
+        evToEbitda: d[24] ?? null,
+        recommendMA: d[25] ?? null,
+        recommendOther: d[26] ?? null,
+        rsi: d[27] ?? null,
+        macd: d[28] ?? null,
+        macdSignal: d[29] ?? null,
+        sma50: d[30] ?? null,
+        sma200: d[31] ?? null,
+        ema20: d[32] ?? null,
+        bbLower: d[33] ?? null,
+        bbUpper: d[34] ?? null,
+        cash: d[36] ?? null,
+        totalDebt: d[37] ?? null,
+        netDebt: d[38] ?? null,
+        beta: d[39] ?? null,
+        perfY: d[40] ?? null,
+        sector: d[41] ?? null,
+        obv: d[42] ?? null,
+        adx: d[43] ?? null,
+        aroonUp: d[44] ?? null,
+        aroonDown: d[45] ?? null,
+        pivotM: d[46] ?? null,
+        pivotR1: d[47] ?? null,
+        pivotS1: d[48] ?? null,
+        fibR1: d[49] ?? null,
+        fibS1: d[50] ?? null,
+        candleDoji: d[51] ?? null,
+        candleHammer: d[52] ?? null,
+        candleMorningStar: d[53] ?? null,
+        candleEngulfingBullish: d[54] ?? null,
+        candleEngulfingBearish: d[55] ?? null,
+        chaikin: d[56] ?? null,
         tvSymbol: bestMatch.s ? bestMatch.s.replace('PSX:', '').replace('KARACHI:', '') : null
       };
     }

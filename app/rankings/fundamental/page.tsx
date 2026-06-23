@@ -11,14 +11,21 @@ interface FundamentalRankItem {
   score: number;
   verdict: string;
   buyRate: number | null;
+  flags?: string[];
+  scoreBreakdown: {
+    businessQuality: number;
+    financialStrength: number;
+    earningsQuality: number;
+    valuation: number;
+  };
   metrics: {
     pe: number | null;
     pb: number | null;
-    roe: number | null;
+    roic: number | null;
     debtToEquity: number | null;
-    roa: number | null;
+    grossMargin: number | null;
+    operatingMargin: number | null;
     currentRatio: number | null;
-    netMargin: number | null;
     evToEbitda: number | null;
   };
 }
@@ -132,8 +139,11 @@ export default function FundamentalRankingsPage() {
                       <div style={{ fontWeight: 800, fontSize: 16, fontFamily: 'JetBrains Mono, monospace' }}>
                         {stock.symbol}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                        Score: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{stock.score}/100</span>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span>Score: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{stock.score}/100</span></span>
+                        {stock.flags && stock.flags.length > 0 && (
+                           <span style={{ color: 'var(--danger)', fontWeight: 600 }}>⚠ {stock.flags.length} Flags</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -148,8 +158,8 @@ export default function FundamentalRankingsPage() {
                       </div>
                     </div>
                     {stock.buyRate && (
-                      <div style={{ textAlign: 'center', background: 'rgba(0, 212, 255, 0.1)', padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(0, 212, 255, 0.2)' }}>
-                        <div style={{ fontSize: 9, color: 'var(--accent-cyan)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target / Intrinsic</div>
+                      <div style={{ textAlign: 'center', background: 'var(--success-dim)', padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                        <div style={{ fontSize: 9, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ideal Buy Price</div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>Rs {stock.buyRate.toFixed(2)}</div>
                       </div>
                     )}
@@ -180,23 +190,53 @@ export default function FundamentalRankingsPage() {
                             <div className="stat-val">{stock.metrics.pb?.toFixed(2) ?? 'N/A'}</div>
                           </div>
                           <div className="stat-box">
-                            <div className="stat-label">ROE (%)</div>
-                            <div className="stat-val">{stock.metrics.roe?.toFixed(2) ?? 'N/A'}</div>
+                            <div className="stat-label">ROIC (%)</div>
+                            <div className="stat-val">{stock.metrics.roic?.toFixed(2) ?? 'N/A'}</div>
                           </div>
                           <div className="stat-box">
-                            <div className="stat-label">ROA (%)</div>
-                            <div className="stat-val">{stock.metrics.roa?.toFixed(2) ?? 'N/A'}</div>
+                            <div className="stat-label">Gross Margin</div>
+                            <div className="stat-val">{stock.metrics.grossMargin?.toFixed(2) ?? 'N/A'}%</div>
                           </div>
                           <div className="stat-box">
                             <div className="stat-label">Debt/Eq</div>
                             <div className="stat-val">{stock.metrics.debtToEquity?.toFixed(2) ?? 'N/A'}</div>
                           </div>
                           <div className="stat-box">
-                            <div className="stat-label">Net Margin</div>
-                            <div className="stat-val">{stock.metrics.netMargin?.toFixed(2) ?? 'N/A'}</div>
+                            <div className="stat-label">EV/EBITDA</div>
+                            <div className="stat-val">{stock.metrics.evToEbitda?.toFixed(2) ?? 'N/A'}</div>
                           </div>
 
                         </div>
+                        
+                        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, textAlign: 'center' }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Business Quality</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>{Math.round(stock.scoreBreakdown?.businessQuality || 0)} / 35</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Fin. Strength</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)' }}>{Math.round(stock.scoreBreakdown?.financialStrength || 0)} / 25</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Earnings Quality</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>{Math.round(stock.scoreBreakdown?.earningsQuality || 0)} / 20</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Valuation</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#8b5cf6' }}>{Math.round(stock.scoreBreakdown?.valuation || 0)} / 20</div>
+                          </div>
+                        </div>
+
+                        {stock.flags && stock.flags.length > 0 && (
+                          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {stock.flags.map((flag, fi) => (
+                              <div key={fi} style={{ background: flag.includes('🚩') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: flag.includes('🚩') ? 'var(--danger)' : 'var(--warning)', padding: '6px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500 }}>
+                                {flag}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => router.push(`/stocks/${stock.symbol}`)}

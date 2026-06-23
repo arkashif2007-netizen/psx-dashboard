@@ -3,7 +3,7 @@ import cache, { TTL } from '@/lib/cache';
 import { SectorMedians } from '@/lib/calculations/scoring';
 
 export async function getGlobalSectorMedians(): Promise<{ medians: Record<string, SectorMedians>, rawData: any[] }> {
-  const CACHE_KEY = 'global_sector_medians_data_v2';
+  const CACHE_KEY = 'global_sector_medians_data_v4';
   const cached = cache.get<{ medians: Record<string, SectorMedians>, rawData: any[] }>(CACHE_KEY);
 
   if (cached && !cached.stale) {
@@ -24,10 +24,18 @@ export async function getGlobalSectorMedians(): Promise<{ medians: Record<string
       "current_ratio",
       "net_margin",
       "operating_margin",
+      "gross_margin",
       "enterprise_value_ebitda",
       "earnings_per_share_basic_ttm",
       "book_value_per_share_fq",
-      "dividend_yield_recent"
+      "dividend_yield_recent",
+      "capital_expenditures_ttm",
+      "free_cash_flow_ttm",
+      "ebitda",
+      "total_revenue",
+      "net_income",
+      "total_debt_fq",
+      "market_cap_basic"
     ],
     filter: [{ left: "type", operation: "in_range", right: ["stock"] }],
     sort: { sortBy: "market_cap_basic", sortOrder: "desc" },
@@ -54,7 +62,7 @@ export async function getGlobalSectorMedians(): Promise<{ medians: Record<string
     sectors[sector].push({
       pe: d[4], pb: d[5], roe: d[6], debtToEquity: d[7],
       roce: d[8], currentRatio: d[9], netMargin: d[10], operatingMargin: d[11],
-      evToEbitda: d[12]
+      grossMargin: d[12], evToEbitda: d[13], eps: d[14]
     });
   });
 
@@ -72,12 +80,16 @@ export async function getGlobalSectorMedians(): Promise<{ medians: Record<string
       pb: getMedian(stocks.map(s => s.pb)),
       roe: getMedian(stocks.map(s => s.roe)),
       debtToEquity: getMedian(stocks.map(s => s.debtToEquity)),
-      roce: getMedian(stocks.map(s => s.roce)),
+      roce: getMedian(stocks.map(s => s.roce)), // Maps to roic in scoring
       currentRatio: getMedian(stocks.map(s => s.currentRatio)),
-      netMargin: getMedian(stocks.map(s => s.netMargin)),
+      grossMargin: getMedian(stocks.map(s => s.grossMargin)),
       operatingMargin: getMedian(stocks.map(s => s.operatingMargin)),
-      evToEbitda: getMedian(stocks.map(s => s.evToEbitda))
-    };
+      evToEbitda: getMedian(stocks.map(s => s.evToEbitda)),
+      eps: getMedian(stocks.map(s => s.eps)),
+      // Legacy compatibility mappings
+      netMargin: getMedian(stocks.map(s => s.netMargin)),
+      roe: getMedian(stocks.map(s => s.roe))
+    } as SectorMedians;
   }
 
   const result = { medians: sectorMedians, rawData };

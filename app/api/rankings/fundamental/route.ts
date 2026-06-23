@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  const CACHE_KEY = 'global_fundamental_ranking_v9';
+  const CACHE_KEY = 'global_fundamental_ranking_v11';
 
   try {
     const cached = cache.get(CACHE_KEY);
@@ -25,66 +25,52 @@ export async function GET() {
       const volume = d[2];
       const sector = d[3] || 'Unknown';
       
-      const eps = d[13];
-      const bvps = d[14];
-      const divYield = d[15];
+      const eps = d[14];
+      const divYield = d[16];
 
       const scoringData = {
         sector,
+        marketCap: d[23] ?? null,
+        price,
+        roic: d[8] ?? null,
+        grossMargin: d[12] ?? null,
+        fcfMargin: null, // Will calculate inside engine
+        operatingMargin: d[11] ?? null,
+        capitalExpenditures: d[17] ?? null,
+        totalRevenue: d[20] ?? null,
+        debtToEquity: d[7] ?? null,
+        ebitda: d[19] ?? null,
+        totalDebt: d[22] ?? null,
+        currentRatio: d[9] ?? null,
+        altmanZ: null, // Altman Z logic omitted for bulk scanner for now, rely on standard D/E & ICR
+        freeCashFlow: d[18] ?? null,
+        netIncome: d[21] ?? null,
+        eps: eps ?? null,
+        roa: null,
         pe: d[4] ?? null,
         pb: d[5] ?? null,
-        roe: d[6] ?? null,
-        debtToEquity: d[7] ?? null,
-        roce: d[8] ?? null,
-        currentRatio: d[9] ?? null,
-        netMargin: d[10] ?? null,
-        operatingMargin: d[11] ?? null,
-        evToEbitda: d[12] ?? null,
+        evToEbitda: d[13] ?? null,
         dividendYield: divYield ?? null
       };
 
       const medians = sectorMedians[sector];
       const scoreResult = calculateFundamentalScore(scoringData, medians);
 
-      // Blended Target Price (Ideal Buy Logic)
-      let buyRate = null;
-      if (eps !== null && eps > 0) {
-        let grahamNumber = null;
-        if (bvps !== null && bvps > 0) {
-          grahamNumber = Math.sqrt(22.5 * eps * bvps);
-        }
-        
-        let relativeTarget = null;
-        if (medians && medians.pe > 0) {
-          relativeTarget = medians.pe * eps;
-        }
-
-        // Blended target: 50% Relative, 50% Graham
-        if (grahamNumber && relativeTarget) {
-          buyRate = (relativeTarget * 0.5) + (grahamNumber * 0.5);
-        } else if (grahamNumber) {
-          buyRate = grahamNumber;
-        } else if (relativeTarget) {
-          buyRate = relativeTarget;
-        }
-
-        // Margin of Safety Discount
-        if (buyRate !== null) {
-          if (scoreResult.overall >= 80) buyRate = buyRate * 0.90; // 10% MoS
-          else if (scoreResult.overall >= 65) buyRate = buyRate * 0.85; // 15% MoS
-          else if (scoreResult.overall >= 50) buyRate = buyRate * 0.80; // 20% MoS
-          else buyRate = null; // Too risky, don't generate buy rate
-        }
-      }
-
       return {
-        symbol,
+        symbol: symbol.replace('PSX:', '').replace('KARACHI:', ''),
         price,
         volume,
         score: scoreResult.overall,
         verdict: scoreResult.verdict,
-        buyRate: buyRate,
-        sector: sector,
+        buyRate: scoreResult.buyRate,
+        sector,
+        flags: scoreResult.flags,
+        scoreBreakdown: {
+          businessQuality: scoreResult.businessQuality,
+          financialStrength: scoreResult.financialStrength,
+          earningsQuality: scoreResult.earningsQuality,
+          valuation: scoreResult.valuation
+        },
         metrics: scoringData
       };
     })

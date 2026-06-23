@@ -4,10 +4,12 @@ import React from 'react';
 
 interface ScoreResult {
   overall: number; // 0-100
-  valuation: number; // 0-30
-  profitability: number; // 0-40
-  health: number; // 0-30
+  businessQuality: number; // 0-35
+  financialStrength: number; // 0-25
+  earningsQuality: number; // 0-20
+  valuation: number; // 0-20
   verdict: string;
+  flags?: string[];
 }
 
 export default function ScoreDisplayCard({ score }: { score: ScoreResult | null }) {
@@ -69,11 +71,32 @@ export default function ScoreDisplayCard({ score }: { score: ScoreResult | null 
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 24px' }}>
-        <Progress label="Valuation" value={score.valuation} max={30} colorOverride="#8b5cf6" />
-        <Progress label="Profitability" value={score.profitability} max={40} colorOverride="#0ea5e9" />
-        <Progress label="Health & Solvency" value={score.health} max={30} colorOverride="#10b981" />
+      <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 32px' }}>
+        <Progress label="Business Quality" value={Math.round(score.businessQuality || 0)} max={35} colorOverride="var(--primary)" />
+        <Progress label="Financial Strength" value={Math.round(score.financialStrength || 0)} max={25} colorOverride="var(--success)" />
+        <Progress label="Earnings Quality" value={Math.round(score.earningsQuality || 0)} max={20} colorOverride="var(--warning)" />
+        <Progress label="Valuation & Entry" value={Math.round(score.valuation || 0)} max={20} colorOverride="#8b5cf6" />
       </div>
+
+      {score.flags && score.flags.length > 0 && (
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 8, fontWeight: 500 }}>Warning Flags:</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {score.flags.map((flag, i) => (
+              <div key={i} style={{ 
+                background: flag.includes('🚩') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                color: flag.includes('🚩') ? 'var(--danger)' : 'var(--warning)',
+                padding: '8px 12px',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 500
+              }}>
+                {flag}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       <p style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
         * Score is dynamically calculated based on 20 fundamental parameters including P/E, P/B, ROE, Margins, Debt/Equity, and Intrinsic Value estimates.
