@@ -17,7 +17,8 @@ export async function GET() {
         "Recommend.All", "return_on_assets", "current_ratio", "quick_ratio", "gross_margin",
         "operating_margin", "net_margin", "free_cash_flow_margin_ttm", "ebitda", "total_revenue",
         "net_income", "earnings_per_share_basic_ttm", "market_cap_basic", "enterprise_value_ebitda",
-        "sector", "Recommend.MA", "Recommend.Other", "RSI7", "MACD.macd"
+        "sector", "Recommend.MA", "Recommend.Other", "RSI7", "MACD.macd",
+        "return_on_invested_capital", "total_debt_fq", "capital_expenditures_ttm", "free_cash_flow_ttm"
       ],
       sort: { sortBy: "market_cap_basic", sortOrder: "desc" },
       range: [0, 500]
@@ -51,11 +52,24 @@ export async function GET() {
         pe: d[3],
         pb: d[4],
         evToEbitda: d[23],
-        roe: d[5],
+        eps: eps,
         roa: d[11],
-        netMargin: d[16],
+        netIncome: d[20],
+        grossMargin: d[14],
+        operatingMargin: d[15],
+        fcfMargin: d[17],
+        capitalExpenditures: d[31],
+        totalRevenue: d[19],
         debtToEquity: d[6],
+        ebitda: d[18],
+        totalDebt: d[30],
         currentRatio: d[12],
+        altmanZ: null,
+        freeCashFlow: d[32],
+        marketCap: d[22],
+        price: price,
+        roic: d[29],
+        dividendYield: d[8],
         sector: d[24] ?? 'Unknown'
       });
       const fundamentalScore = fundamentalResult.overall;
