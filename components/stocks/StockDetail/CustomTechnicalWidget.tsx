@@ -72,7 +72,7 @@ export default function CustomTechnicalWidget({ data }: CustomTechnicalWidgetPro
   const volumeColor = chaikin === null ? 'var(--text-muted)' : (chaikin > 0 ? 'var(--success)' : 'var(--danger)');
 
   // Master Score Logic Update
-  let masterMomentum = (adv.recommendAll ?? 0) * 50 + 50; // Base 0-100
+  let masterMomentum = (adv.recommendation ?? 0) * 50 + 50; // Base 0-100
   if (adx !== null && adx > 25) {
     // Strengthen the existing signal
     masterMomentum = masterMomentum > 50 ? Math.min(100, masterMomentum + 5) : Math.max(0, masterMomentum - 5);
