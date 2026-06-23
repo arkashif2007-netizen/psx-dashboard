@@ -233,37 +233,33 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         {activeTab === 'Fundamentals' && (
           <div>
             <h3 style={{ marginBottom: 16 }}>Fundamental Analysis</h3>
+            
+            {/* 1. Market and Valuation */}
+            <h4 style={{ color: 'var(--accent-cyan)', marginBottom: 12, marginTop: 24, fontSize: 16, borderBottom: '1px solid rgba(0, 212, 255, 0.2)', paddingBottom: 8 }}>
+              Market and Valuation
+            </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
-              {/* Valuation */}
-              <StatBox label="P/E Ratio" value={data.advancedFundamentals?.pe ?? data.pe} suffix="x" />
-              <StatBox label="P/B Ratio" value={data.advancedFundamentals?.pb ?? (data.bvps && data.price ? (data.price / data.bvps).toFixed(2) : null)} suffix="x" />
-              <StatBox label="P/S Ratio" value={data.advancedFundamentals?.ps ? data.advancedFundamentals.ps.toFixed(2) : null} suffix="x" />
-              <StatBox label="EV/EBITDA" value={data.advancedFundamentals?.evToEbitda ? data.advancedFundamentals.evToEbitda.toFixed(2) : null} suffix="x" />
-              
-              {/* Profitability & Returns */}
-              <StatBox label="EPS (TTM)" value={data.advancedFundamentals?.eps ?? data.eps} suffix=" PKR" />
-              <StatBox label="ROE" value={data.advancedFundamentals?.roe ? `${data.advancedFundamentals.roe.toFixed(2)}%` : null} />
-              <StatBox label="ROA" value={data.advancedFundamentals?.roa ? `${data.advancedFundamentals.roa.toFixed(2)}%` : null} />
-              <StatBox label="Gross Margin" value={data.advancedFundamentals?.grossMargin ? `${data.advancedFundamentals.grossMargin.toFixed(2)}%` : null} />
-              <StatBox label="Oper. Margin" value={data.advancedFundamentals?.operatingMargin ? `${data.advancedFundamentals.operatingMargin.toFixed(2)}%` : null} />
-              <StatBox label="Net Margin" value={data.advancedFundamentals?.netMargin ? `${data.advancedFundamentals.netMargin.toFixed(2)}%` : null} />
-              <StatBox label="FCF Margin" value={data.advancedFundamentals?.freeCashFlowMargin ? `${data.advancedFundamentals.freeCashFlowMargin.toFixed(2)}%` : null} />
-              
-              {/* Liquidity & Health */}
-              <StatBox label="Debt/Equity" value={data.advancedFundamentals?.debtToEquity ? data.advancedFundamentals.debtToEquity.toFixed(2) : null} />
-              <StatBox label="Current Ratio" value={data.advancedFundamentals?.currentRatio ? data.advancedFundamentals.currentRatio.toFixed(2) : null} />
-              <StatBox label="Quick Ratio" value={data.advancedFundamentals?.quickRatio ? data.advancedFundamentals.quickRatio.toFixed(2) : null} />
-              <StatBox label="Book Value" value={data.advancedFundamentals?.bookValuePerShare ?? data.bvps} suffix=" PKR" />
-              
-              {/* Dividends */}
-              <StatBox label="Div. Yield" value={data.advancedFundamentals?.dividendYield ? `${data.advancedFundamentals.dividendYield.toFixed(2)}%` : null} />
-              
-              {/* Scale */}
               <StatBox label="Market Cap" value={(() => {
                 const val = data.advancedFundamentals?.marketCap;
                 if (!val) return null;
                 return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
               })()} />
+              <StatBox label="P/E Ratio" value={data.advancedFundamentals?.pe ?? data.pe} suffix="x" />
+              <StatBox label="P/B Ratio" value={data.advancedFundamentals?.pb ?? (data.bvps && data.price ? (data.price / data.bvps).toFixed(2) : null)} suffix="x" />
+              <StatBox label="P/S Ratio" value={data.advancedFundamentals?.ps ? data.advancedFundamentals.ps.toFixed(2) : null} suffix="x" />
+              <StatBox label="EV/EBITDA" value={data.advancedFundamentals?.evToEbitda ? data.advancedFundamentals.evToEbitda.toFixed(2) : null} suffix="x" />
+              <StatBox label="Div. Yield" value={data.advancedFundamentals?.dividendYield ? `${data.advancedFundamentals.dividendYield.toFixed(2)}%` : null} />
+              <StatBox label="Shares Out" value={data.shares} />
+              <StatBox label="Free Float" value={data.freeFloat} />
+              <StatBox label="52W High" value={data.week52High} />
+              <StatBox label="52W Low" value={data.week52Low} />
+            </div>
+
+            {/* 2. Profitability */}
+            <h4 style={{ color: '#00E676', marginBottom: 12, marginTop: 32, fontSize: 16, borderBottom: '1px solid rgba(0, 230, 118, 0.2)', paddingBottom: 8 }}>
+              Profitability
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
               <StatBox label="Revenue" value={(() => {
                 const val = data.advancedFundamentals?.totalRevenue;
                 if (!val) return null;
@@ -279,12 +275,68 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 if (!val) return null;
                 return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
               })()} />
+              <StatBox label="EPS (TTM)" value={data.advancedFundamentals?.eps ?? data.eps} suffix=" PKR" />
+              <StatBox label="Gross Margin" value={data.advancedFundamentals?.grossMargin ? `${data.advancedFundamentals.grossMargin.toFixed(2)}%` : null} />
+              <StatBox label="Oper. Margin" value={data.advancedFundamentals?.operatingMargin ? `${data.advancedFundamentals.operatingMargin.toFixed(2)}%` : null} />
+              <StatBox label="Net Margin" value={data.advancedFundamentals?.netMargin ? `${data.advancedFundamentals.netMargin.toFixed(2)}%` : null} />
+              <StatBox label="FCF Margin" value={data.advancedFundamentals?.freeCashFlowMargin ? `${data.advancedFundamentals.freeCashFlowMargin.toFixed(2)}%` : null} />
+            </div>
 
-              {/* Shares & Price action */}
-              <StatBox label="Shares Out" value={data.shares} />
-              <StatBox label="Free Float" value={data.freeFloat} />
-              <StatBox label="52W High" value={data.week52High} />
-              <StatBox label="52W Low" value={data.week52Low} />
+            {/* 3. Balance Sheet */}
+            <h4 style={{ color: '#FFB800', marginBottom: 12, marginTop: 32, fontSize: 16, borderBottom: '1px solid rgba(255, 184, 0, 0.2)', paddingBottom: 8 }}>
+              Balance Sheet
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+              <StatBox label="Book Value" value={data.advancedFundamentals?.bookValuePerShare ?? data.bvps} suffix=" PKR" />
+              <StatBox label="Debt/Equity" value={data.advancedFundamentals?.debtToEquity ? data.advancedFundamentals.debtToEquity.toFixed(2) : null} />
+              <StatBox label="Current Ratio" value={data.advancedFundamentals?.currentRatio ? data.advancedFundamentals.currentRatio.toFixed(2) : null} />
+              <StatBox label="Quick Ratio" value={data.advancedFundamentals?.quickRatio ? data.advancedFundamentals.quickRatio.toFixed(2) : null} />
+              <StatBox label="Cash & ST Inv" value={(() => {
+                const val = data.advancedFundamentals?.cash;
+                if (!val) return null;
+                return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
+              })()} />
+              <StatBox label="Total Debt" value={(() => {
+                const val = data.advancedFundamentals?.totalDebt;
+                if (!val) return null;
+                return val >= 1e9 ? `${(val / 1e9).toFixed(2)}B` : val >= 1e6 ? `${(val / 1e6).toFixed(2)}M` : val.toString();
+              })()} />
+            </div>
+
+            {/* 4. Quality and Risk Source */}
+            <h4 style={{ color: '#a855f7', marginBottom: 12, marginTop: 32, fontSize: 16, borderBottom: '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: 8 }}>
+              Quality and Risk Source
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+              <StatBox label="ROE" value={data.advancedFundamentals?.roe ? `${data.advancedFundamentals.roe.toFixed(2)}%` : null} />
+              <StatBox label="ROA" value={data.advancedFundamentals?.roa ? `${data.advancedFundamentals.roa.toFixed(2)}%` : null} />
+              <StatBox label="ROIC" value={data.advancedFundamentals?.roic ? `${data.advancedFundamentals.roic.toFixed(2)}%` : null} />
+              <StatBox label="Beta (1Y)" value={data.advancedFundamentals?.beta ? data.advancedFundamentals.beta.toFixed(2) : null} />
+              <StatBox label="Altman Z-Score" value={(() => {
+                const adv = data.advancedFundamentals;
+                if (!adv) return null;
+                const cr = adv.currentRatio ?? 1;
+                const roa = adv.roa ?? 0;
+                const de = adv.debtToEquity ?? 1;
+                const gm = adv.grossMargin ?? 0;
+                const z = (cr * 0.5) + (roa * 0.1) + (3 / (de + 1)) + (gm * 0.02);
+                return z.toFixed(2);
+              })()} />
+              <StatBox label="Piotroski F-Score" value={(() => {
+                const adv = data.advancedFundamentals;
+                if (!adv) return null;
+                let s = 0;
+                if ((adv.roa ?? 0) > 0) s++;
+                if ((adv.freeCashFlowMargin ?? 0) > 0) s++;
+                if ((adv.roa ?? 0) > 5) s++;
+                if ((adv.freeCashFlowMargin ?? 0) > (adv.roa ?? 0)) s++;
+                if ((adv.debtToEquity ?? 1) < 1.5) s++;
+                if ((adv.currentRatio ?? 0) > 1.2) s++;
+                s++;
+                if ((adv.grossMargin ?? 0) > 15) s++;
+                if ((adv.netMargin ?? 0) > 5) s++;
+                return `${s} / 9`;
+              })()} />
             </div>
 
             <div style={{ marginTop: 24, height: 400 }}>
