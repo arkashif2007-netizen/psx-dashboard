@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import KSEWidgetWrapper from '@/components/layout/KSEWidgetWrapper';
 import MarketStatus from '@/components/layout/MarketStatus';
-import TVTechnicalWidget from '@/components/stocks/StockDetail/TVTechnicalWidget';
+import CustomTechnicalWidget from '@/components/stocks/StockDetail/CustomTechnicalWidget';
 import TVProfileWidget from '@/components/stocks/StockDetail/TVProfileWidget';
 import CustomNewsWidget from '@/components/market/CustomNewsWidget';
 import FipiLipiMiniChart from '@/components/market/FipiLipiMiniChart';
@@ -338,8 +338,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         {activeTab === 'Technicals' && (
           <div>
             <h3 style={{ marginBottom: 16 }}>Technical Analysis</h3>
-            <div style={{ height: 450 }}>
-              <TVTechnicalWidget symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} />
+            <div>
+              <CustomTechnicalWidget data={data} />
             </div>
           </div>
         )}
@@ -455,8 +455,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             <div style={{ textAlign: 'center', marginTop: 40 }}>
               <h4 style={{ marginBottom: 16, color: 'var(--text-secondary)' }}>Technical Analysis</h4>
               <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Based on technical indicators and moving averages.</p>
-              <div style={{ maxWidth: 500, margin: '0 auto', height: 450 }}>
-                 <TVTechnicalWidget symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} />
+              <div style={{ maxWidth: 500, margin: '0 auto' }}>
+                 <CustomTechnicalWidget data={data} />
               </div>
             </div>
           </div>
@@ -545,8 +545,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
             </div>
             <div style={{ marginTop: 16 }}>
               <h4 style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Technical Summary</h4>
-              <div style={{ height: 450 }}>
-                <TVTechnicalWidget symbol={data.advancedFundamentals?.tvSymbol || data.symbol.replace('.', '')} />
+              <div>
+                <CustomTechnicalWidget data={data} />
               </div>
             </div>
           </div>

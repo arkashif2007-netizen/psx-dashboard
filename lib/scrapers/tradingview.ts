@@ -24,6 +24,24 @@ export interface TVAdvancedFundamentals {
   marketCap: number | null;
   evToEbitda: number | null;
   tvSymbol: string | null;
+  // --- New Technicals ---
+  recommendMA: number | null;
+  recommendOther: number | null;
+  rsi: number | null;
+  macd: number | null;
+  macdSignal: number | null;
+  sma50: number | null;
+  sma200: number | null;
+  ema20: number | null;
+  bbLower: number | null;
+  bbUpper: number | null;
+  // --- New Fundamentals ---
+  roic: number | null;
+  cash: number | null;
+  totalDebt: number | null;
+  netDebt: number | null;
+  beta: number | null;
+  perfY: number | null;
 }
 
 export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvancedFundamentals | null> {
@@ -52,7 +70,23 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         "net_income",
         "earnings_per_share_basic_ttm",
         "market_cap_basic",
-        "enterprise_value_ebitda"
+        "enterprise_value_ebitda",
+        "Recommend.MA",
+        "Recommend.Other",
+        "RSI",
+        "MACD.macd",
+        "MACD.signal",
+        "SMA50",
+        "SMA200",
+        "EMA20",
+        "BB.lower",
+        "BB.upper",
+        "return_on_invested_capital",
+        "cash_n_short_term_invest_fq",
+        "total_debt_fq",
+        "net_debt_fq",
+        "beta_1_year",
+        "Perf.Y"
       ]
     }, {
       headers: {
@@ -89,6 +123,22 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         eps: d[19] ?? null,
         marketCap: d[20] ?? null,
         evToEbitda: d[21] ?? null,
+        recommendMA: d[22] ?? null,
+        recommendOther: d[23] ?? null,
+        rsi: d[24] ?? null,
+        macd: d[25] ?? null,
+        macdSignal: d[26] ?? null,
+        sma50: d[27] ?? null,
+        sma200: d[28] ?? null,
+        ema20: d[29] ?? null,
+        bbLower: d[30] ?? null,
+        bbUpper: d[31] ?? null,
+        roic: d[32] ?? null,
+        cash: d[33] ?? null,
+        totalDebt: d[34] ?? null,
+        netDebt: d[35] ?? null,
+        beta: d[36] ?? null,
+        perfY: d[37] ?? null,
         tvSymbol: bestMatch.s ? bestMatch.s.replace('PSX:', '').replace('KARACHI:', '') : null
       };
     }
