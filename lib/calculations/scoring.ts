@@ -294,8 +294,8 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
     else earnedValuation += 0;
   } else {
     // Fallback if valuation engine couldn't compute (e.g. negative FCF, negative EPS)
-    addScore('val', scoreLowerIsBetter(data.pe, medians?.pe, 10, 12));
-    addScore('val', scoreLowerIsBetter(data.pb, medians?.pb, 10, 1.5));
+    addScore('valuation', scoreLowerIsBetter(data.pe, medians?.pe, 10, 12));
+    addScore('valuation', scoreLowerIsBetter(data.pb, medians?.pb, 10, 1.5));
   }
 
   // Normalize scores to their original maximum weights

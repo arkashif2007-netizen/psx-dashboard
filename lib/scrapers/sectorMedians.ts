@@ -78,18 +78,14 @@ export async function getGlobalSectorMedians(): Promise<{ medians: Record<string
     sectorMedians[sector] = {
       pe: getMedian(stocks.map(s => s.pe)),
       pb: getMedian(stocks.map(s => s.pb)),
-      roe: getMedian(stocks.map(s => s.roe)),
-      debtToEquity: getMedian(stocks.map(s => s.debtToEquity)),
-      roce: getMedian(stocks.map(s => s.roce)), // Maps to roic in scoring
-      currentRatio: getMedian(stocks.map(s => s.currentRatio)),
+      evToEbitda: getMedian(stocks.map(s => s.evToEbitda)),
+      roic: getMedian(stocks.map(s => s.roce)),
       grossMargin: getMedian(stocks.map(s => s.grossMargin)),
       operatingMargin: getMedian(stocks.map(s => s.operatingMargin)),
-      evToEbitda: getMedian(stocks.map(s => s.evToEbitda)),
+      debtToEquity: getMedian(stocks.map(s => s.debtToEquity)),
+      currentRatio: getMedian(stocks.map(s => s.currentRatio)),
       eps: getMedian(stocks.map(s => s.eps)),
-      // Legacy compatibility mappings
-      netMargin: getMedian(stocks.map(s => s.netMargin)),
-      roe: getMedian(stocks.map(s => s.roe))
-    } as SectorMedians;
+    };
   }
 
   const result = { medians: sectorMedians, rawData };

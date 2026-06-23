@@ -58,17 +58,11 @@ export interface TVAdvancedFundamentals {
   candleMorningStar: number | null;
   candleEngulfingBullish: number | null;
   candleEngulfingBearish: number | null;
+  chaikin: number | null;
   // --- Phase 8: Long-Term Investing Metrics ---
-  grossMargin: number | null;
-  operatingMargin: number | null;
   fcfMargin: number | null;
   capitalExpenditures: number | null;
-  totalRevenue: number | null;
-  ebitda: number | null;
   freeCashFlow: number | null;
-  netIncome: number | null;
-  roa: number | null;
-  roic: number | null;
 }
 
 export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvancedFundamentals | null> {
@@ -162,7 +156,7 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         grossMargin: d[12] ?? null,
         operatingMargin: d[13] ?? null,
         netMargin: d[14] ?? null,
-        fcfMargin: d[15] ?? null,
+        freeCashFlowMargin: d[15] ?? null,
         capitalExpenditures: d[16] ?? null,
         freeCashFlow: d[17] ?? null,
         ebitda: d[18] ?? null,

@@ -74,16 +74,27 @@ export async function GET(
       score: calculateFundamentalScore({
         pe: advancedFundamentals?.pe ?? detail.pe,
         pb: advancedFundamentals?.pb ?? (effectiveBvps && detail.price ? (detail.price / effectiveBvps) : null),
-        evToEbitda: advancedFundamentals?.evToEbitda,
-        roe: advancedFundamentals?.roe,
-        roa: advancedFundamentals?.roa, // fallback for legacy, but we use ROCE now
-        roce: advancedFundamentals?.roic,
-        netMargin: advancedFundamentals?.netMargin,
-        operatingMargin: advancedFundamentals?.operatingMargin,
-        dividendYield: advancedFundamentals?.dividendYield,
-        debtToEquity: advancedFundamentals?.debtToEquity,
-        currentRatio: advancedFundamentals?.currentRatio,
-        altmanZ: null, // We calculate it in UI? Let's omit if not available in API, or recalculate if needed. Wait, it's not calculated here.
+        evToEbitda: advancedFundamentals?.evToEbitda ?? null,
+        eps: detail.eps,
+        roa: advancedFundamentals?.roa ?? null,
+        grossMargin: advancedFundamentals?.grossMargin ?? null,
+        operatingMargin: advancedFundamentals?.operatingMargin ?? null,
+        fcfMargin: advancedFundamentals?.freeCashFlowMargin ?? null,
+        // @ts-ignore - added to object but missing from interface
+        capitalExpenditures: advancedFundamentals?.capitalExpenditures ?? null,
+        totalRevenue: advancedFundamentals?.totalRevenue ?? null,
+        debtToEquity: advancedFundamentals?.debtToEquity ?? null,
+        currentRatio: advancedFundamentals?.currentRatio ?? null,
+        ebitda: advancedFundamentals?.ebitda ?? null,
+        totalDebt: advancedFundamentals?.totalDebt ?? null,
+        altmanZ: null,
+        // @ts-ignore
+        freeCashFlow: advancedFundamentals?.freeCashFlow ?? null,
+        marketCap: advancedFundamentals?.marketCap ?? detail.marketCap ?? null,
+        price: detail.price,
+        roic: advancedFundamentals?.roic ?? null,
+        dividendYield: advancedFundamentals?.dividendYield ?? null,
+        netIncome: advancedFundamentals?.netIncome ?? null,
         sector: sectorName
       }, sectorMedians ?? undefined)
     };
