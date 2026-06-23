@@ -42,6 +42,7 @@ export interface TVAdvancedFundamentals {
   netDebt: number | null;
   beta: number | null;
   perfY: number | null;
+  sector: string | null;
   // --- Phase 6: Advanced Technicals ---
   obv: number | null;
   adx: number | null;
@@ -103,6 +104,7 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         "net_debt_fq",
         "beta_1_year",
         "Perf.Y",
+        "sector",
         "OBV",
         "ADX",
         "Aroon.Up",
@@ -170,21 +172,22 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         netDebt: d[35] ?? null,
         beta: d[36] ?? null,
         perfY: d[37] ?? null,
-        obv: d[38] ?? null,
-        adx: d[39] ?? null,
-        aroonUp: d[40] ?? null,
-        aroonDown: d[41] ?? null,
-        pivotM: d[42] ?? null,
-        pivotR1: d[43] ?? null,
-        pivotS1: d[44] ?? null,
-        fibR1: d[45] ?? null,
-        fibS1: d[46] ?? null,
-        candleDoji: d[47] ?? null,
-        candleHammer: d[48] ?? null,
-        candleMorningStar: d[49] ?? null,
-        candleEngulfingBullish: d[50] ?? null,
-        candleEngulfingBearish: d[51] ?? null,
-        chaikin: d[52] ?? null,
+        sector: d[38] ?? null,
+        obv: d[39] ?? null,
+        adx: d[40] ?? null,
+        aroonUp: d[41] ?? null,
+        aroonDown: d[42] ?? null,
+        pivotM: d[43] ?? null,
+        pivotR1: d[44] ?? null,
+        pivotS1: d[45] ?? null,
+        fibR1: d[46] ?? null,
+        fibS1: d[47] ?? null,
+        candleDoji: d[48] ?? null,
+        candleHammer: d[49] ?? null,
+        candleMorningStar: d[50] ?? null,
+        candleEngulfingBullish: d[51] ?? null,
+        candleEngulfingBearish: d[52] ?? null,
+        chaikin: d[53] ?? null,
         tvSymbol: bestMatch.s ? bestMatch.s.replace('PSX:', '').replace('KARACHI:', '') : null
       };
     }

@@ -4,6 +4,7 @@ import { calculateGrahamNumber, evaluateGrahamValue } from '@/lib/calculations/g
 import { calculateDCF, evaluateDCFValue } from '@/lib/calculations/dcf';
 import { getAdvancedFundamentals } from '@/lib/scrapers/tradingview';
 import { calculateFundamentalScore } from '@/lib/calculations/scoring';
+import { getGlobalSectorMedians } from '@/lib/scrapers/sectorMedians';
 import cache, { TTL } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +51,18 @@ export async function GET(
     const grahamValue = calculateGrahamNumber(detail.eps, effectiveBvps);
     const grahamStatus = evaluateGrahamValue(detail.price, grahamValue);
 
+    // Fetch sector medians
+    let sectorMedians = null;
+    let sectorName = advancedFundamentals?.sector || null;
+    try {
+      const { medians } = await getGlobalSectorMedians();
+      if (sectorName && medians[sectorName]) {
+        sectorMedians = medians[sectorName];
+      }
+    } catch (e) {
+      console.warn('Could not fetch global sector medians', e);
+    }
+
     const enrichedDetail = {
       ...detail,
       bvps: effectiveBvps,
@@ -63,13 +76,16 @@ export async function GET(
         pb: advancedFundamentals?.pb ?? (effectiveBvps && detail.price ? (detail.price / effectiveBvps) : null),
         evToEbitda: advancedFundamentals?.evToEbitda,
         roe: advancedFundamentals?.roe,
-        roa: advancedFundamentals?.roa,
+        roa: advancedFundamentals?.roa, // fallback for legacy, but we use ROCE now
+        roce: advancedFundamentals?.roic,
         netMargin: advancedFundamentals?.netMargin,
+        operatingMargin: advancedFundamentals?.operatingMargin,
+        dividendYield: advancedFundamentals?.dividendYield,
         debtToEquity: advancedFundamentals?.debtToEquity,
         currentRatio: advancedFundamentals?.currentRatio,
-        grahamStatus,
-        dcfStatus
-      })
+        altmanZ: null, // We calculate it in UI? Let's omit if not available in API, or recalculate if needed. Wait, it's not calculated here.
+        sector: sectorName
+      }, sectorMedians ?? undefined)
     };
 
     cache.set(CACHE_KEY, enrichedDetail, TTL.STOCK_PRICE);

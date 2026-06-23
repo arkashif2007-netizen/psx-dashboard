@@ -5,9 +5,8 @@ import React from 'react';
 interface ScoreResult {
   overall: number; // 0-100
   valuation: number; // 0-30
-  profitability: number; // 0-30
-  health: number; // 0-20
-  intrinsic: number; // 0-20
+  profitability: number; // 0-40
+  health: number; // 0-30
   verdict: string;
 }
 
@@ -68,10 +67,9 @@ export default function ScoreDisplayCard({ score }: { score: ScoreResult | null 
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 24px' }}>
-        <Progress label="Valuation" value={score.valuation} max={30} colorOverride="var(--accent-cyan)" />
-        <Progress label="Profitability" value={score.profitability} max={30} colorOverride="#8b5cf6" />
-        <Progress label="Financial Health" value={score.health} max={20} colorOverride="#10b981" />
-        <Progress label="Intrinsic Value" value={score.intrinsic} max={20} colorOverride="#f59e0b" />
+        <Progress label="Valuation" value={score.valuation} max={30} colorOverride="#8b5cf6" />
+        <Progress label="Profitability" value={score.profitability} max={40} colorOverride="#0ea5e9" />
+        <Progress label="Health & Solvency" value={score.health} max={30} colorOverride="#10b981" />
       </div>
       
       <p style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>

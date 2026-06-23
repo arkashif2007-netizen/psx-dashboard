@@ -56,8 +56,7 @@ export async function GET() {
         netMargin: d[16],
         debtToEquity: d[6],
         currentRatio: d[12],
-        grahamStatus,
-        dcfStatus
+        sector: d[24] ?? 'Unknown'
       });
       const fundamentalScore = fundamentalResult.overall;
 
