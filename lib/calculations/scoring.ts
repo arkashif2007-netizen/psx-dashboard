@@ -41,7 +41,7 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
 
   // Helpers for relative scoring
   const scoreHigherIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
-    if (val === null || val === undefined) return 0; // Missing data = 0 pts
+    if (val === null || val === undefined) return maxPts * 0.5; // Missing data (e.g. Banks lacking EV/EBITDA) gets neutral points so blue chips aren't destroyed
     if (val < 0) return 0; 
     if (!median) return maxPts * 0.5; // If no median exists, but it's positive
     if (val >= median * 1.2) return maxPts; // Beats median by 20%+
@@ -51,7 +51,7 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
   };
 
   const scoreLowerIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
-    if (val === null || val === undefined) return 0; // Missing data = 0 pts
+    if (val === null || val === undefined) return maxPts * 0.5; // Missing data = neutral pts
     if (val < 0) return 0; // Negative values (e.g. negative PE) handled by explicit penalties later
     if (!median) return maxPts * 0.5;
     if (val <= median * 0.8) return maxPts; // Beats median by 20%+
