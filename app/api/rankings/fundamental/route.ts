@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  const CACHE_KEY = 'global_fundamental_ranking';
+  const CACHE_KEY = 'global_fundamental_ranking_v2';
 
   try {
     const cached = cache.get(CACHE_KEY);
@@ -27,7 +27,9 @@ export async function GET() {
         "return_on_assets",
         "current_ratio",
         "net_margin",
-        "enterprise_value_ebitda"
+        "enterprise_value_ebitda",
+        "earnings_per_share_basic_ttm",
+        "book_value_per_share_fq"
       ]
     }, {
       headers: {
@@ -46,6 +48,19 @@ export async function GET() {
       const price = d[1];
       const volume = d[2];
       
+      const eps = d[11];
+      const bvps = d[12];
+      
+      let grahamNumber = null;
+      let grahamStatus = null;
+      if (eps !== null && bvps !== null && eps > 0 && bvps > 0) {
+        grahamNumber = Math.sqrt(22.5 * eps * bvps);
+        if (price) {
+          if (price < grahamNumber * 0.8) grahamStatus = 'UNDERVALUED';
+          else if (price < grahamNumber * 1.2) grahamStatus = 'FAIR';
+        }
+      }
+
       const scoringData = {
         pe: d[3] ?? null,
         pb: d[4] ?? null,
@@ -55,6 +70,7 @@ export async function GET() {
         currentRatio: d[8] ?? null,
         netMargin: d[9] ?? null,
         evToEbitda: d[10] ?? null,
+        grahamStatus: grahamStatus
       };
 
       const scoreResult = calculateFundamentalScore(scoringData);
@@ -65,6 +81,7 @@ export async function GET() {
         volume,
         score: scoreResult.overall,
         verdict: scoreResult.verdict,
+        buyRate: grahamNumber, // Phase 7: Export Graham Number as Intrinsic Target
         metrics: scoringData
       };
     })

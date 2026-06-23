@@ -10,6 +10,7 @@ interface FundamentalRankItem {
   volume: number | null;
   score: number;
   verdict: string;
+  buyRate: number | null;
   metrics: {
     pe: number | null;
     pb: number | null;
@@ -137,10 +138,16 @@ export default function FundamentalRankingsPage() {
                         {stock.verdict}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                        Rs {stock.price?.toFixed(2) ?? '—'}
+                        Live: Rs {stock.price?.toFixed(2) ?? '—'}
                       </div>
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 12, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                    {stock.buyRate && (
+                      <div style={{ textAlign: 'center', background: 'rgba(0, 212, 255, 0.1)', padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(0, 212, 255, 0.2)' }}>
+                        <div style={{ fontSize: 9, color: 'var(--accent-cyan)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target / Intrinsic</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>Rs {stock.buyRate.toFixed(2)}</div>
+                      </div>
+                    )}
+                    <div style={{ color: 'var(--text-muted)', fontSize: 12, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', marginLeft: 8 }}>
                       ▼
                     </div>
                   </div>
