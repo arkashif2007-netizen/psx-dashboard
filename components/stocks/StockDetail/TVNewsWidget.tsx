@@ -15,7 +15,7 @@ function TVNewsWidget({ symbol }: { symbol: string }) {
       script.async = true;
       script.innerHTML = JSON.stringify({
         feedMode: "symbol",
-        symbol: symbol.includes(':') ? symbol : `KARACHI:${symbol}`,
+        symbol: symbol.includes(':') ? symbol : `PSX:${symbol}`,
         colorTheme: "dark",
         isTransparent: true,
         displayMode: "regular",

@@ -18,7 +18,7 @@ function TVProfileWidget({ symbol }: { symbol: string }) {
       height: "100%",
       colorTheme: "dark",
       isTransparent: true,
-      symbol: symbol.includes(':') ? symbol : `KARACHI:${symbol}`,
+      symbol: symbol.includes(':') ? symbol : `PSX:${symbol}`,
       locale: "en"
     });
     container.current.appendChild(script);

@@ -57,7 +57,20 @@ export async function GET(request: Request) {
     });
 
     // Apply filters
-    let filtered = mergedSymbols;
+    let filtered = mergedSymbols.filter(s => {
+      const nameUpper = s.name.toUpperCase();
+      const sectorUpper = s.sectorName.toUpperCase();
+      
+      // Exclude explicitly delisted or defaulter segment stocks
+      if (nameUpper.includes('DELISTED') || nameUpper.includes('DEFAULTER')) return false;
+      if (sectorUpper.includes('DEFAULTER') || sectorUpper.includes('DELISTED')) return false;
+
+      // Exclude effectively dead/suspended stocks with no price and no volume
+      const isDead = (!s.price || s.price === 0) && (!s.volume || s.volume === 0);
+      if (isDead) return false;
+
+      return true;
+    });
 
     if (filter === 'equity') {
       filtered = filtered.filter(s => !s.isETF && !s.isDebt);
