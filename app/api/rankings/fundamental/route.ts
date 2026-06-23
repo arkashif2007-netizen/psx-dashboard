@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  const CACHE_KEY = 'global_fundamental_ranking_v8';
+  const CACHE_KEY = 'global_fundamental_ranking_v9';
 
   try {
     const cached = cache.get(CACHE_KEY);

@@ -45,7 +45,7 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
   let possibleValuation = 0;
 
   // Helpers for relative scoring
-  const scoreHigherIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
+  const scoreHigherIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number, absoluteGoodLevel?: number) => {
     if (val === null || val === undefined) return { earned: 0, possible: 0 }; // Exclude from evaluation
     
     let earned = 0;
@@ -60,11 +60,16 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
     } else if (val >= median * 0.8) {
       earned = maxPts * 0.3;
     }
+
+    // Absolute fallback for highly profitable companies that just happen to have a crazy high sector median
+    if (absoluteGoodLevel && val >= absoluteGoodLevel && earned < maxPts * 0.5) {
+      earned = maxPts * 0.5;
+    }
     
     return { earned, possible: maxPts };
   };
 
-  const scoreLowerIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number) => {
+  const scoreLowerIsBetter = (val: number | null | undefined, median: number | undefined, maxPts: number, absoluteGoodLevel?: number) => {
     if (val === null || val === undefined) return { earned: 0, possible: 0 };
     
     let earned = 0;
@@ -78,6 +83,11 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
       earned = maxPts * 0.75;
     } else if (val <= median * 1.2) {
       earned = maxPts * 0.3;
+    }
+
+    // Absolute fallback: if the stock has a fundamentally safe value but sector is just dirt cheap
+    if (absoluteGoodLevel && val <= absoluteGoodLevel && val > 0 && earned < maxPts * 0.5) {
+      earned = maxPts * 0.5;
     }
     
     return { earned, possible: maxPts };
@@ -97,10 +107,10 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
   };
 
   // --- PILLAR 1: PROFITABILITY (Max 40) ---
-  addScore('prof', scoreHigherIsBetter(data.roe, medians?.roe, 15));
-  addScore('prof', scoreHigherIsBetter(data.roce, medians?.roce, 10));
-  addScore('prof', scoreHigherIsBetter(data.netMargin, medians?.netMargin, 10));
-  addScore('prof', scoreHigherIsBetter(data.operatingMargin, medians?.operatingMargin, 5));
+  addScore('prof', scoreHigherIsBetter(data.roe, medians?.roe, 15, 20)); // Absolute good ROE: 20%
+  addScore('prof', scoreHigherIsBetter(data.roce, medians?.roce, 10, 15)); // Absolute good ROCE: 15%
+  addScore('prof', scoreHigherIsBetter(data.netMargin, medians?.netMargin, 10, 15)); // Absolute good Net Margin: 15%
+  addScore('prof', scoreHigherIsBetter(data.operatingMargin, medians?.operatingMargin, 5, 15));
 
   // Profitability Penalties
   let profPenalty = 0;
@@ -109,8 +119,8 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
   earnedProfitability = Math.max(0, earnedProfitability - profPenalty);
 
   // --- PILLAR 2: HEALTH & SOLVENCY (Max 30) ---
-  addScore('health', scoreLowerIsBetter(data.debtToEquity, medians?.debtToEquity, 12));
-  addScore('health', scoreHigherIsBetter(data.currentRatio, medians?.currentRatio, 9));
+  addScore('health', scoreLowerIsBetter(data.debtToEquity, medians?.debtToEquity, 12, 1.5)); // Absolute good D/E: < 1.5
+  addScore('health', scoreHigherIsBetter(data.currentRatio, medians?.currentRatio, 9, 1.2)); // Absolute good CR: > 1.2
   
   if (data.altmanZ !== null && data.altmanZ !== undefined) {
     possibleHealth += 9;
@@ -124,9 +134,9 @@ export function calculateFundamentalScore(data: ScoringData, medians?: SectorMed
   earnedHealth = Math.max(0, earnedHealth - healthPenalty);
 
   // --- PILLAR 3: VALUATION (Max 30) ---
-  addScore('val', scoreLowerIsBetter(data.pe, medians?.pe, 10));
-  addScore('val', scoreLowerIsBetter(data.pb, medians?.pb, 8));
-  addScore('val', scoreLowerIsBetter(data.evToEbitda, medians?.evToEbitda, 8));
+  addScore('val', scoreLowerIsBetter(data.pe, medians?.pe, 10, 12)); // Absolute good PE: < 12
+  addScore('val', scoreLowerIsBetter(data.pb, medians?.pb, 8, 1.5)); // Absolute good PB: < 1.5
+  addScore('val', scoreLowerIsBetter(data.evToEbitda, medians?.evToEbitda, 8, 8)); // Absolute good EV/EBITDA: < 8
 
   if (data.dividendYield !== null && data.dividendYield !== undefined) {
     possibleValuation += 4;
