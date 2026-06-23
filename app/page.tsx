@@ -115,11 +115,12 @@ export default function HomePage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {[
             { icon: '📋', label: 'All Stocks', desc: '550+ listed', href: '/stocks', color: '#00D4FF' },
+            { icon: '💎', label: 'Fund. Rank', desc: 'Top investments', href: '/rankings/fundamental', color: '#00E676' },
+            { icon: '📈', label: 'Tech. Rank', desc: 'Trade momentum', href: '/rankings/technical', color: '#a855f7' },
             { icon: '🏦', label: 'FIPI / LIPI', desc: 'Institution flow', href: '/fipi-lipi', color: '#7C3AED' },
             { icon: '📅', label: 'Board Meetings', desc: 'Upcoming events', href: '/board-meetings', color: '#FFB800' },
             { icon: '💹', label: 'Financial Results', desc: 'Earnings & EPS', href: '/financial-results', color: '#00E676' },
             { icon: '📰', label: 'Market News', desc: 'PSX & economy', href: '/news', color: '#FF3D57' },
-            { icon: '🔮', label: 'Trend Forecast', desc: 'AI predictions', href: '/trend-forecast', color: '#00D4FF' },
           ].map((item) => (
             <a
               key={item.href}
