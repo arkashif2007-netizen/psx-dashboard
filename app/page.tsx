@@ -120,6 +120,7 @@ export default function HomePage() {
             { icon: '🏦', label: 'FIPI / LIPI', desc: 'Institution flow', href: '/fipi-lipi', color: '#7C3AED' },
             { icon: '📅', label: 'Board Meetings', desc: 'Upcoming events', href: '/board-meetings', color: '#FFB800' },
             { icon: '💹', label: 'Financial Results', desc: 'Earnings & EPS', href: '/financial-results', color: '#00E676' },
+            { icon: '💰', label: 'Payouts', desc: 'Dividends & Ex-Date', href: '/payouts', color: '#FFD700' },
             { icon: '📰', label: 'Market News', desc: 'PSX & economy', href: '/news', color: '#FF3D57' },
           ].map((item) => (
             <a
