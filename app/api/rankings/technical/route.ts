@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  const CACHE_KEY = 'global_technical_ranking';
+  const CACHE_KEY = 'global_technical_ranking_v2';
 
   try {
     const cached = cache.get(CACHE_KEY);
@@ -26,7 +26,14 @@ export async function GET() {
         "MACD.macd", 
         "MACD.signal", 
         "SMA50", 
-        "SMA200"
+        "SMA200",
+        "ADX",
+        "ChaikinMoneyFlow",
+        "Candle.Hammer",
+        "Candle.Engulfing.Bullish",
+        "Candle.Engulfing.Bearish",
+        "Candle.MorningStar",
+        "Pivot.M.Classic.Middle"
       ]
     }, {
       headers: {
@@ -46,7 +53,28 @@ export async function GET() {
       const volume = d[2];
       
       const recAll = d[3] ?? 0; // -1 to 1
-      const score = Math.round(((recAll + 1) / 2) * 100); // Normalize -1..1 to 0..100
+      let score = Math.round(((recAll + 1) / 2) * 100); // Normalize -1..1 to 0..100
+
+      // Add Phase 6 Modifiers
+      const adx = d[11];
+      const chaikin = d[12];
+      const candleHammer = d[13];
+      const candleEngBull = d[14];
+      const candleEngBear = d[15];
+      const candleMorn = d[16];
+
+      if (adx !== null && adx > 25) {
+        score = score > 50 ? Math.min(100, score + 5) : Math.max(0, score - 5);
+      }
+      if (chaikin !== null && chaikin > 0) {
+        score = Math.min(100, score + 5);
+      }
+      if (candleHammer || candleEngBull || candleMorn) {
+        score = Math.min(100, score + 10);
+      }
+      if (candleEngBear) {
+        score = Math.max(0, score - 10);
+      }
 
       let verdict = 'HOLD';
       if (score >= 80) verdict = 'STRONG BUY';
@@ -69,7 +97,10 @@ export async function GET() {
           macd: d[7],
           macdSignal: d[8],
           sma50: d[9],
-          sma200: d[10]
+          sma200: d[10],
+          adx: adx,
+          chaikin: chaikin,
+          pivotM: d[17]
         }
       };
     })

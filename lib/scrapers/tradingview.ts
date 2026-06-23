@@ -42,6 +42,22 @@ export interface TVAdvancedFundamentals {
   netDebt: number | null;
   beta: number | null;
   perfY: number | null;
+  // --- Phase 6: Advanced Technicals ---
+  obv: number | null;
+  adx: number | null;
+  aroonUp: number | null;
+  aroonDown: number | null;
+  pivotM: number | null;
+  pivotR1: number | null;
+  pivotS1: number | null;
+  fibR1: number | null;
+  fibS1: number | null;
+  candleDoji: number | null;
+  candleHammer: number | null;
+  candleMorningStar: number | null;
+  candleEngulfingBullish: number | null;
+  candleEngulfingBearish: number | null;
+  chaikin: number | null;
 }
 
 export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvancedFundamentals | null> {
@@ -86,7 +102,22 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         "total_debt_fq",
         "net_debt_fq",
         "beta_1_year",
-        "Perf.Y"
+        "Perf.Y",
+        "OBV",
+        "ADX",
+        "Aroon.Up",
+        "Aroon.Down",
+        "Pivot.M.Classic.Middle",
+        "Pivot.M.Classic.R1",
+        "Pivot.M.Classic.S1",
+        "Pivot.M.Fibonacci.R1",
+        "Pivot.M.Fibonacci.S1",
+        "Candle.Doji",
+        "Candle.Hammer",
+        "Candle.MorningStar",
+        "Candle.Engulfing.Bullish",
+        "Candle.Engulfing.Bearish",
+        "ChaikinMoneyFlow"
       ]
     }, {
       headers: {
@@ -139,6 +170,21 @@ export async function getAdvancedFundamentals(symbol: string): Promise<TVAdvance
         netDebt: d[35] ?? null,
         beta: d[36] ?? null,
         perfY: d[37] ?? null,
+        obv: d[38] ?? null,
+        adx: d[39] ?? null,
+        aroonUp: d[40] ?? null,
+        aroonDown: d[41] ?? null,
+        pivotM: d[42] ?? null,
+        pivotR1: d[43] ?? null,
+        pivotS1: d[44] ?? null,
+        fibR1: d[45] ?? null,
+        fibS1: d[46] ?? null,
+        candleDoji: d[47] ?? null,
+        candleHammer: d[48] ?? null,
+        candleMorningStar: d[49] ?? null,
+        candleEngulfingBullish: d[50] ?? null,
+        candleEngulfingBearish: d[51] ?? null,
+        chaikin: d[52] ?? null,
         tvSymbol: bestMatch.s ? bestMatch.s.replace('PSX:', '').replace('KARACHI:', '') : null
       };
     }
